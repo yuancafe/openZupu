@@ -1,6 +1,6 @@
-# OpenZupu
+# OpenZupu (开元族谱)
 
-> **OpenZupu** is an open-source digital genealogy management and federated verification system designed for non-technical clan associations, archives, and academic researchers. Leveraging modern web technologies, local AI/OCR, DNA haplogroup & STR matching, and federated peer-to-peer query networks, it enables cross-regional and cross-organizational pedigree comparison and lineage searching while strictly preserving privacy.
+> **OpenZupu (开元族谱)** is an open-source digital genealogy management and federated verification system designed for non-technical clan associations, archives, and academic researchers. Leveraging modern web technologies, local AI/OCR, Y-DNA/mtDNA haplogroup & STR matching, and federated peer-to-peer query networks, it enables cross-regional and cross-organizational pedigree comparison and lineage searching while strictly preserving privacy.
 
 [Chinese version is available here (中文文档点击此处)](./README.md)
 
