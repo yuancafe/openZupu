@@ -5,37 +5,32 @@ All notable changes to OpenZupu will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.0.0] - 2026-07-06
+## [1.3.0] - 2026-07-06
 ### Added
-- **JWT HttpOnly Cookies & Silent Refresh**: Implemented secure browser session state management utilizing strict HttpOnly cookies. Removed all client-side localStorage access token operations to mitigate XSS vulnerabilities.
-- **Refresh Token Rotation & Revocation**: Added database-backed `RefreshToken` model with automatic 1-to-1 token rotation and silent token refresh re-auth flow on HTTP 401. Active refresh tokens are revoked on password changes and logouts.
-- **Biology-accurate STR Locus-level DNA Matching**: Replaced simple Jaccard string similarity checks with locus-allele parsed matching for Short Tandem Repeat (STR) genetic markers, supporting multi-allele structures (e.g. `DYS393=13,14`).
-- **Input Validation Sanitization**: Added strict constraints to date strings (Max length 50, safety regex matches whitelist) to prevent SQL/XSS injections in historical date fields.
-- **Double Access Guarding**: Added service-layer OWNER checks on projects `update` and `remove` methods as a secondary validation layer.
+- **DNA Haplogroups Support**: Added Y-DNA (patrilineal) and mtDNA (matrilineal) haplogroup recording fields to the Person schema.
+- **STR Locus-Allele Matching**: Designed and implemented locus-allele parsed matching for Short Tandem Repeat (STR) genetic markers to support multi-allele DNA matching (e.g. `DYS393=13,14`), replacing simple set intersections with high-accuracy biological overlap calculation.
+- **Structured Date Validation**: Restrained historical date strings with strict length checks (max 50) and white-list character regular expressions to secure flexible historical entries (e.g., `Circa 1850`) against SQL and Script injections.
 
-### Changed
-- Refactored `McpController` requesting contexts to remove `any` type, hardening NestJS runtime safety with `AuthenticatedRequest`.
-- Cleaned up duplicate inline guards and migrated controllers to class-level `@UseGuards(AuthGuard('jwt'), ProjectAccessGuard)`.
-- Enforced pagination and page sizing checks (`take`) on peer federated search queries and parallel nodes checking.
-
-### Removed
-- Deleted obsolete legacy bypass script `apps/api/src/mcp/openzupu-mcp.ts`.
-
-## [0.5.0] - 2026-07-04
+## [1.2.0] - 2026-07-04
 ### Added
-- **Genealogy Duplicate Detection**: Implemented similarity-based person duplicate detection and matching algorithms (`DuplicateService`) to identify identical people across family tree records.
-- **Local OCR Extraction**: Integrated `tesseract.js` client-side library for traditional Chinese character extraction.
-- **PRD Updates**: Documented local AI pipeline specs and cross-peer database search flow inside `docs/OpenZupu PRD.md`.
+- **Federated Query Engine**: Developed cross-peer non-blocking query aggregation in `FederationService` to query registered peer endpoints in parallel.
+- **Peer Linkage**: Implemented `linkFederated` logic to build persistent links between matching persons in different family trees across separate databases.
+- **Antitrust Safeguards**: Added validation constraints (`projectId` required, `take` parameter default 10, max 50) to protect peer networks from DDoS and cross-project data leakage.
 
-## [0.2.0] - 2026-07-02
+## [1.1.0] - 2026-07-02
 ### Added
-- **RBAC & Project Member Protection**: Added `ProjectMember` schema for granular role permissions (OWNER, ADMIN, EDITOR, VIEWER) and introduced NestJS `ProjectAccessGuard`.
-- **Relational Social Networks**: Integrated institutional networks, status records, social associations, and standard GraphML export.
-- **Recusive Traditional Tree Rendering**: Added nested generation and branch parsing endpoints for interactive visual charting.
+- **AI Agent Integration**: Implemented Model Context Protocol (MCP) server endpoints in `McpModule` supporting 7 standard tool cards (`list_projects`, `search_persons`, `get_person_details`, `get_traditional_tree`, `detect_duplicates`, `export_graphml`, `import_json`) enabling LLM agents to view, read, and write family tree data.
+- **Interactive Visualizations**: Connected graph export endpoints (`/export/graphml`) for visualizing relational graphs in Neo4j/Gephi and OCR traditional Chinese image extraction via `tesseract.js`.
+- **Typing Hardening**: Extended Express request definitions with typed `AuthenticatedRequest` context inside `McpController` to remove generic `any` signatures.
 
-## [0.1.0] - 2026-07-01
+## [1.0.0] - 2026-07-01
 ### Added
-- **Monorepo setup**: Initialized Turborepo with pnpm workspaces.
-- **Database (Prisma + SQLite)**: Created v0.1 schema containing `Project`, `User`, `Person`, `Name`, `KinshipRelation`, `Event`, `Place`, `Source`, `Evidence`, `Claim`.
-- **Backend API (NestJS)**: Scaffolded modules for all entities and implemented core CRUD API endpoints. Configured PrismaService.
-- **Frontend App (Next.js)**: Created global layouts, simple Tailwind CSS components, a Projects dashboard, and a Project details page showing persons lists.
+- **HttpOnly Cookies Session**: Migrated JWT access and refresh token distribution to strictly isolated browser HttpOnly cookies, completely eliminating localStorage XSS hijacking vulnerabilities.
+- **Silent Token Rotation**: Added token rotation (token-rotation pattern) via database-backed `RefreshToken` storage to rotately issue fresh access/refresh pairs on HTTP 401.
+- **Double Access Guarding**: Reinforced project `update` and `remove` methods with a second layer of inline owner access check inside `ProjectService`.
+- **Active Session Revocation**: Programmed automatic refresh token deletions to force-invalidate all other active device sessions upon password updates and logouts.
+
+## [0.1.0] - 2026-06-30
+### Added
+- **Infrastructure & Monorepo**: Configured Turborepo with pnpm workspaces for NestJS API, Next.js Web frontend, and Prisma database.
+- **Relational Zupu Schema**: Structured v0.1 models containing projects, members, branches, generations, events, places, sources, and kinship relations.

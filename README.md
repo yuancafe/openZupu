@@ -27,6 +27,33 @@
 
 ---
 
+## 技术栈
+
+- **前端**：Next.js 16 (App Router) + Tailwind CSS + Lucide Icons + React
+- **后端**：NestJS 11 + Passport JWT (HttpOnly Cookies) + Class Validator
+- **数据层**：Prisma ORM + SQLite (开发/单机) / PostgreSQL (生产兼容)
+- **AI/OCR**：Tesseract.js (传统中文/简体中文本地识别)
+- **构建工具**：Turborepo (Monorepo 管理) + pnpm
+
+---
+
+## 目录结构
+
+```text
+openZupu/
+├── apps/
+│   ├── api/          # NestJS 后端服务入口，提供 RESTful API 与 MCP 服务
+│   └── web/          # Next.js 前端 Portal，提供人机交互界面与 OCR 模块
+├── packages/
+│   └── database/     # Prisma Schema 描述、数据模型及迁移管理包
+├── data/             # SQLite 本地物理存储目录（持久化卷挂载点）
+├── docs/             # 审计日志、开发记录及需求 PRD 归档目录
+├── docker-compose.yml# 容器化生产一键部署配置文件
+└── package.json
+```
+
+---
+
 ## 快速开始
 
 ### 运行环境要求

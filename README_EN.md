@@ -27,6 +27,33 @@
 
 ---
 
+## Tech Stack
+
+- **Frontend**: Next.js 16 (App Router) + Tailwind CSS + Lucide Icons + React
+- **Backend**: NestJS 11 + Passport JWT (HttpOnly Cookies) + Class Validator
+- **Database**: Prisma ORM + SQLite (local/dev) / PostgreSQL (production compatible)
+- **AI/OCR**: Tesseract.js (local OCR for Traditional & Simplified Chinese)
+- **Build System**: Turborepo (Monorepo Management) + pnpm
+
+---
+
+## Directory Structure
+
+```text
+openZupu/
+├── apps/
+│   ├── api/          # NestJS backend api server & Model Context Protocol (MCP) server
+│   └── web/          # Next.js frontend web application & local OCR module
+├── packages/
+│   └── database/     # Prisma Schema descriptions, models, and migrations
+├── data/             # Persistent storage volume mount point for SQLite file
+├── docs/             # Audit logs, development logs, and PRD specifications
+├── docker-compose.yml# Single-step Docker deployment file
+└── package.json
+```
+
+---
+
 ## Quick Start
 
 ### Prerequisites
