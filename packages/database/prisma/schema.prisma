@@ -1,0 +1,399 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(uuid())
+  username  String   @unique
+  email     String   @unique
+  password  String
+  role      String   @default("USER") // ADMIN, USER
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  projects  Project[]
+  memberships ProjectMember[]
+  refreshTokens RefreshToken[]
+}
+
+model ProjectMember {
+  id        String   @id @default(uuid())
+  projectId String
+  userId    String
+  role      String   @default("EDITOR") // OWNER, ADMIN, EDITOR, VIEWER
+  project   Project  @relation(fields: [projectId], references: [id])
+  user      User     @relation(fields: [userId], references: [id])
+  
+  @@unique([projectId, userId])
+}
+
+model Project {
+  id              String   @id @default(uuid())
+  name            String
+  description     String?
+  projectType     String?  // Family, Clan, Research
+  ownerId         String
+  owner           User     @relation(fields: [ownerId], references: [id])
+  defaultPrivacy  String   @default("Private")
+  dataLicense     String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  members         ProjectMember[]
+  persons         Person[]
+  kinshipRelations KinshipRelation[]
+  events          Event[]
+  sources         Source[]
+  branches        Branch[]
+  generations     Generation[]
+}
+
+model Branch {
+  id             String   @id @default(uuid())
+  projectId      String
+  project        Project  @relation(fields: [projectId], references: [id])
+  name           String
+  description    String?
+  parentBranchId String?
+  parentBranch   Branch?  @relation("SubBranches", fields: [parentBranchId], references: [id])
+  subBranches    Branch[] @relation("SubBranches")
+  founderId      String?
+  founder        Person?  @relation("BranchFounder", fields: [founderId], references: [id])
+  
+  persons        Person[]
+}
+
+model Generation {
+  id               String   @id @default(uuid())
+  projectId        String
+  project          Project  @relation(fields: [projectId], references: [id])
+  generationNumber Int
+  character        String
+  poem             String?
+  notes            String?
+}
+
+model CustomField {
+  id          String   @id @default(uuid())
+  entityType  String   // PERSON, EVENT, etc.
+  entityId    String
+  fieldName   String
+  fieldValue  String
+  fieldType   String   @default("STRING") // STRING, NUMBER, DATE, BOOLEAN
+  isPublic    Boolean  @default(true)
+}
+
+model Person {
+  id                  String   @id @default(uuid())
+  projectId           String
+  project             Project  @relation(fields: [projectId], references: [id])
+  primaryNameId       String?
+  sex                 String?  // Male, Female, Unknown
+  birthDate           String?
+  deathDate           String?
+  isLiving            Boolean  @default(false)
+  nativePlaceId       String?
+  nativePlace         Place?   @relation("NativePlace", fields: [nativePlaceId], references: [id])
+  ancestralPlaceId    String?
+  ancestralPlace      Place?   @relation("AncestralPlace", fields: [ancestralPlaceId], references: [id])
+  residencePlaceId    String?
+  residencePlace      Place?   @relation("ResidencePlace", fields: [residencePlaceId], references: [id])
+  biography           String?
+  notes               String?
+  privacyLevel        String   @default("Private")
+  confidence          Float    @default(1.0)
+
+  // Chinese lineage extensions
+  surname             String?
+  originalSurname     String?
+  adoptedSurname      String?
+  givenName           String?
+  genealogicalName    String?
+  courtesyName        String?
+  artName             String?
+  tabooName           String?
+  posthumousName      String?
+  childhoodName       String?
+  generationCharacter String?
+  generationNumber    Int?
+  rankInSiblings      String?
+
+  patrilinealDna      String?
+  matrilinealDna      String?
+  dnaSampleId         String?
+  dnaMarkers          String?
+
+  branchId            String?
+  branch              Branch?  @relation(fields: [branchId], references: [id])
+  foundedBranches     Branch[] @relation("BranchFounder")
+
+  federatedId         String?
+  externalLink        String?
+
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  names               Name[]
+  relationsAsFrom     KinshipRelation[] @relation("FromPerson")
+  relationsAsTo       KinshipRelation[] @relation("ToPerson")
+}
+
+model Name {
+  id          String   @id @default(uuid())
+  personId    String
+  person      Person   @relation(fields: [personId], references: [id])
+  nameValue   String
+  surname     String?
+  givenName   String?
+  nameType    String   // PRIMARY_NAME, BIRTH_NAME, GENEALOGICAL_NAME...
+  language    String?
+  script      String?
+  startDate   String?
+  endDate     String?
+  context     String?
+  sourceId    String?
+  confidence  Float    @default(1.0)
+}
+
+model KinshipRelation {
+  id                  String   @id @default(uuid())
+  projectId           String
+  project             Project  @relation(fields: [projectId], references: [id])
+  fromPersonId        String
+  fromPerson          Person   @relation("FromPerson", fields: [fromPersonId], references: [id])
+  toPersonId          String
+  toPerson            Person   @relation("ToPerson", fields: [toPersonId], references: [id])
+  relationType        String   // BIOLOGICAL_FATHER_OF, ADOPTED_OUT_TO, SPOUSE_OF...
+  inverseRelationType String?
+  startDate           String?
+  endDate             String?
+  status              String   @default("CONFIRMED") // CONFIRMED, POSSIBLE...
+  confidence          Float    @default(1.0)
+  sourceId            String?
+  claimId             String?
+  notes               String?
+  
+  createdById         String?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+}
+
+model Event {
+  id            String   @id @default(uuid())
+  projectId     String
+  project       Project  @relation(fields: [projectId], references: [id])
+  eventType     String
+  title         String
+  date          String?
+  placeId       String?
+  place         Place?   @relation(fields: [placeId], references: [id])
+  description   String?
+  sourceId      String?
+  source        Source?  @relation(fields: [sourceId], references: [id])
+  claimId       String?
+  confidence    Float    @default(1.0)
+  privacyLevel  String   @default("Private")
+  notes         String?
+}
+
+model Place {
+  id            String   @id @default(uuid())
+  name          String
+  fullName      String?
+  placeType     String?
+  parentPlaceId String?
+  historicalName String?
+  currentName   String?
+  startDate     String?
+  endDate       String?
+  latitude      Float?
+  longitude     Float?
+  notes         String?
+
+  nativePersons    Person[] @relation("NativePlace")
+  ancestralPersons Person[] @relation("AncestralPlace")
+  residencePersons Person[] @relation("ResidencePlace")
+  events           Event[]
+}
+
+model Source {
+  id            String   @id @default(uuid())
+  projectId     String
+  project       Project  @relation(fields: [projectId], references: [id])
+  sourceType    String
+  title         String
+  author        String?
+  compiler      String?
+  year          String?
+  dynasty       String?
+  volume        String?
+  page          String?
+  repositoryId  String?
+  repository    Institution? @relation("SourceRepository", fields: [repositoryId], references: [id])
+  url           String?
+  citation      String?
+  reliability   String?
+  transcription String?
+  translation   String?
+  notes         String?
+  
+  evidences     Evidence[]
+  events        Event[]
+}
+
+model Evidence {
+  id                String   @id @default(uuid())
+  sourceId          String
+  source            Source   @relation(fields: [sourceId], references: [id])
+  locationInSource  String?
+  originalText      String?
+  transcription     String?
+  translation       String?
+  interpretation    String?
+  confidence        Float    @default(1.0)
+  createdById       String?
+  createdAt         DateTime @default(now())
+
+  claims            Claim[]
+}
+
+model Claim {
+  id            String   @id @default(uuid())
+  subjectType   String
+  subjectId     String
+  predicate     String
+  objectValue   String?
+  evidenceId    String?
+  evidence      Evidence? @relation(fields: [evidenceId], references: [id])
+  sourceId      String?
+  quote         String?
+  interpretation String?
+  confidence    Float    @default(1.0)
+  status        String   @default("ACCEPTED")
+  privacyLevel  String   @default("Public")
+  createdById   String?
+  reviewedById  String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+// v0.3 Models
+model Revision {
+  id          String   @id @default(uuid())
+  entityType  String
+  entityId    String
+  changes     String   // JSON string of changes
+  userId      String?
+  createdAt   DateTime @default(now())
+}
+
+// v0.4 Models
+model SocialAssociation {
+  id          String   @id @default(uuid())
+  projectId   String
+  fromId      String
+  toId        String
+  relationType String  // Teacher, Student, Friend, Colleague
+  startDate   String?
+  endDate     String?
+  notes       String?
+}
+
+model Institution {
+  id          String   @id @default(uuid())
+  projectId   String
+  name        String
+  type        String   // School, Government, Company, Military
+  locationId  String?
+  description String?
+
+  sources     Source[] @relation("SourceRepository")
+}
+
+model InstitutionRelation {
+  id            String   @id @default(uuid())
+  projectId     String
+  personId      String
+  institutionId String
+  role          String   // Student, Employee, Officer
+  startDate     String?
+  endDate       String?
+}
+
+model OfficeOccupation {
+  id          String   @id @default(uuid())
+  projectId   String
+  personId    String
+  title       String
+  type        String   // Civil, Military, Trade, Academic
+  placeId     String?
+  startDate   String?
+  endDate     String?
+}
+
+model StatusRecord {
+  id          String   @id @default(uuid())
+  projectId   String
+  personId    String
+  statusType  String   // Degree, Title, Exile, Honors
+  statusValue String
+  date        String?
+}
+
+// v0.5 Models
+model OCRTask {
+  id          String   @id @default(uuid())
+  projectId   String
+  imageUrl    String
+  status      String   @default("PENDING") // PENDING, PROCESSING, COMPLETED, FAILED
+  result      String?  // JSON
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// New Models
+model Clan {
+  id            String   @id @default(uuid())
+  name          String
+  description   String?
+  ancestralHall String?
+  originPlace   String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model DateExpression {
+  id             String    @id @default(uuid())
+  calendarType   String    @default("LUNAR") // LUNAR, GREGORIAN, etc.
+  originalString String
+  gregorianStart DateTime?
+  gregorianEnd   DateTime?
+  isRange        Boolean   @default(false)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+}
+
+model FederationPeer {
+  id              String   @id @default(uuid())
+  name            String
+  url             String   @unique
+  apiKey          String?
+  remoteProjectId String?
+  notes           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}
