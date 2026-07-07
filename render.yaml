@@ -34,6 +34,6 @@ services:
       - key: NODE_ENV
         value: production
       - key: CORS_ORIGINS
-        sync: false   # set manually after web deploy at https://openzupu-demo.vercel.app
+        value: https://openzupu-demo-web-yuancafes-projects.vercel.app,https://openzupu-demo-web-git-main-yuancafes-projects.vercel.app
       - key: PORT
         value: "3001"

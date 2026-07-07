@@ -77,3 +77,4 @@ data/*.db-journal
 
 # Turborepo
 .turbo/
+.cache-home/

@@ -8,7 +8,7 @@
 
 ## Key Features
 
-- 🏠 **Ready-to-use Lightweight Architecture**: Built on NestJS + Next.js + Prisma + SQLite, making it perfect for single-machine local or local-area-network private deployments.
+- 🏠 **Ready-to-use Lightweight Architecture**: Built on NestJS + Next.js + Prisma + PostgreSQL, making it suitable for local development, private deployments, and the Render demo stack.
 - 🔒 **Enterprise-grade Security**:
   - Employs completely isolated **HttpOnly Cookies + Refresh Token Rotation** to fully eliminate XSS attacks stealing credentials from localStorage.
   - Granular RBAC project access control (OWNER, ADMIN, EDITOR, VIEWER) combined with double-guard validation checks on service-layer writes and deletions.
@@ -31,7 +31,7 @@
 
 - **Frontend**: Next.js 16 (App Router) + Tailwind CSS + Lucide Icons + React
 - **Backend**: NestJS 11 + Passport JWT (HttpOnly Cookies) + Class Validator
-- **Database**: Prisma ORM + SQLite (local/dev) / PostgreSQL (production compatible)
+- **Database**: Prisma ORM + PostgreSQL (consistent across local development and production)
 - **AI/OCR**: Tesseract.js (local OCR for Traditional & Simplified Chinese)
 - **Build System**: Turborepo (Monorepo Management) + pnpm
 
@@ -46,7 +46,6 @@ openZupu/
 │   └── web/          # Next.js frontend web application & local OCR module
 ├── packages/
 │   └── database/     # Prisma Schema descriptions, models, and migrations
-├── data/             # Persistent storage volume mount point for SQLite file
 ├── docs/             # Audit logs, development logs, and PRD specifications
 ├── docker-compose.yml# Single-step Docker deployment file
 └── package.json
@@ -75,7 +74,9 @@ cp .env.example .env
 ```
 Configuration details:
 - `JWT_SECRET`: Define a strong, random key for signing JWTs.
-- `DATABASE_URL`: Defaults to local SQLite file, no external database services are required.
+- `DATABASE_URL`: PostgreSQL connection string; for local development, start the database with `docker-compose.dev.yml`.
+- `CORS_ORIGINS`: Frontend origins allowed to access the API, separated by commas.
+- `NEXT_PUBLIC_API_URL`: API endpoint used by the web app, for example `http://localhost:3001/api`.
 
 ### 3. Initialize Database
 ```bash
@@ -100,7 +101,7 @@ Launch the complete OpenZupu stack on your home server or cloud instance using D
 ```bash
 docker-compose up --build -d
 ```
-The default compose setup automatically mounts SQLite volumes for database persistence.
+The default compose setup provisions PostgreSQL for database persistence.
 
 ---
 

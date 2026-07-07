@@ -46,7 +46,6 @@ openZupu/
 │   └── web/          # Next.js 前端 Portal，提供人机交互界面与 OCR 模块
 ├── packages/
 │   └── database/     # Prisma Schema 描述、数据模型及迁移管理包
-├── data/             # SQLite 本地物理存储目录（持久化卷挂载点）
 ├── docs/             # 审计日志、开发记录及需求 PRD 归档目录
 ├── docker-compose.yml# 容器化生产一键部署配置文件
 └── package.json
@@ -75,7 +74,9 @@ cp .env.example .env
 ```
 配置说明：
 - `JWT_SECRET`：设置用于生成 JWT 凭证的强随机密钥。
-- `DATABASE_URL`：默认使用项目本地 of SQLite 文件，无需配置数据库服务。
+- `DATABASE_URL`：PostgreSQL 连接字符串；本地开发可使用 `docker-compose.dev.yml` 启动数据库。
+- `CORS_ORIGINS`：允许访问 API 的前端源，多个地址用英文逗号分隔。
+- `NEXT_PUBLIC_API_URL`：前端访问后端的 API 地址，例如 `http://localhost:3001/api`。
 
 ### 3. 初始化数据库
 ```bash
@@ -115,9 +116,7 @@ docker-compose up --build -d
 1. Fork 本仓库到你的 GitHub。
 2. 登录 [render.com](https://render.com)，新建 **Blueprint**。
 3. 选择 fork 的仓库，Render 会自动识别根目录的 `render.yaml`。
-4. 在创建过程中：
-   - 设置 `JWT_SECRET` 为 64 位随机字符串（Render 会提示设置 Secret）
-   - 第一次部署完后会创建 PostgreSQL 数据库
+4. 第一次部署完后会创建 PostgreSQL 数据库；`render.yaml` 会自动生成 `JWT_SECRET` 并注入数据库连接。
 5. 等待部署完成，记下 API URL（如 `https://openzupu-api-xxx.onrender.com`）。
 
 部署时 Dockerfile 会自动：
@@ -134,11 +133,13 @@ docker-compose up --build -d
    - `NEXT_PUBLIC_API_URL` = `https://openzupu-api-xxx.onrender.com/api`（替换为步骤 1 的 URL）
 5. Deploy。Vercel 会自动用 `apps/web/vercel.json` 里的配置构建。
 
-#### 3. 回到 Render 设置 CORS
+#### 3. 检查 Render CORS
 
-部署完前端后，记下 Vercel URL（如 `https://openzupu.vercel.app`），回到 Render 服务的环境变量：
-- `CORS_ORIGINS` = `https://openzupu.vercel.app`
-- 触发手动 redeploy（Render 会自动重启服务）
+`render.yaml` 已默认允许当前 demo 项目的 Vercel 域名：
+- `https://openzupu-demo-web-yuancafes-projects.vercel.app`
+- `https://openzupu-demo-web-git-main-yuancafes-projects.vercel.app`
+
+如果你绑定了自定义域名，回到 Render 服务的环境变量追加该域名到 `CORS_ORIGINS`，然后触发一次 redeploy。
 
 ### Demo 登录账号
 
