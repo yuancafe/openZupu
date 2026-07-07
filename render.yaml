@@ -30,12 +30,10 @@ services:
           name: openzupu-db
           property: connectionString
       - key: JWT_SECRET
-        sync: false   # set manually in Render dashboard
-        value: "REPLACE_WITH_RANDOM_64_CHAR_SECRET"
+        generateValue: true
       - key: NODE_ENV
         value: production
       - key: CORS_ORIGINS
-        sync: false   # set to your Vercel URL after web deploy
-        value: ""
+        sync: false   # set manually after web deploy at https://openzupu-demo.vercel.app
       - key: PORT
         value: "3001"
