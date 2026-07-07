@@ -136,6 +136,7 @@ docker-compose up --build -d
 #### 3. 检查 Render CORS
 
 `render.yaml` 已默认允许当前 demo 项目的 Vercel 域名：
+- `https://openzupu-demo-web.vercel.app`
 - `https://openzupu-demo-web-yuancafes-projects.vercel.app`
 - `https://openzupu-demo-web-git-main-yuancafes-projects.vercel.app`
 
