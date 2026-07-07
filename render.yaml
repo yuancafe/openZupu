@@ -36,4 +36,4 @@ services:
       - key: CORS_ORIGINS
         value: https://openzupu-demo-web.vercel.app,https://openzupu-demo-web-yuancafes-projects.vercel.app,https://openzupu-demo-web-git-main-yuancafes-projects.vercel.app
       - key: PORT
-        value: "3001"
+        value: "10000"
