@@ -14,6 +14,7 @@ import { AuthService } from './auth.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
+import { Public } from './public.decorator';
 
 @Controller('auth')
 export class AuthController {
@@ -22,6 +23,7 @@ export class AuthController {
     private readonly prisma: PrismaService,
   ) {}
 
+  @Public()
   @Post('login')
   async login(
     @Body() body: LoginDto,
@@ -62,6 +64,7 @@ export class AuthController {
     return tokens;
   }
 
+  @Public()
   @Post('register')
   async register(@Body() body: RegisterDto) {
     const { username, email, password } = body;
@@ -86,6 +89,7 @@ export class AuthController {
     return result;
   }
 
+  @Public()
   @Post('refresh')
   async refresh(
     @Request() req: any,
@@ -118,6 +122,7 @@ export class AuthController {
     return tokens;
   }
 
+  @Public()
   @Post('logout')
   async logout(
     @Request() req: any,

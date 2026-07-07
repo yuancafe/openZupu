@@ -40,6 +40,7 @@ import { APP_INTERCEPTOR, APP_GUARD } from '@nestjs/core';
 import { AuditLogInterceptor } from './common/interceptors/audit-log.interceptor';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { ProjectAccessGuard } from './project/guards/project-access.guard';
+import { JwtAuthGuard } from './auth/jwt-auth.guard';
 
 @Module({
   imports: [
@@ -96,6 +97,10 @@ import { ProjectAccessGuard } from './project/guards/project-access.guard';
     {
       provide: APP_GUARD,
       useClass: ThrottlerGuard,
+    },
+    {
+      provide: APP_GUARD,
+      useClass: JwtAuthGuard,
     },
     {
       provide: APP_GUARD,

@@ -104,6 +104,58 @@ docker-compose up --build -d
 
 ---
 
+## ☁️ 云端部署 (Vercel + Render) — Demo 模式
+
+为方便大家快速体验效果，提供 **拆分云端部署** 方案：前端托管在 Vercel，后端 API + 数据库托管在 Render。
+
+### 一键部署步骤
+
+#### 1. 部署后端到 Render
+
+1. Fork 本仓库到你的 GitHub。
+2. 登录 [render.com](https://render.com)，新建 **Blueprint**。
+3. 选择 fork 的仓库，Render 会自动识别根目录的 `render.yaml`。
+4. 在创建过程中：
+   - 设置 `JWT_SECRET` 为 64 位随机字符串（Render 会提示设置 Secret）
+   - 第一次部署完后会创建 PostgreSQL 数据库
+5. 等待部署完成，记下 API URL（如 `https://openzupu-api-xxx.onrender.com`）。
+
+部署时 Dockerfile 会自动：
+1. 跑 `prisma db push` 创建表结构
+2. 跑 `prisma-seed.cjs` 写入**张氏大成宗谱 · 江南支派** demo 数据（3 兄弟 + 6 配偶 + 6 孙辈 + 2 在世曾孙 = 18 人物 + 27 亲属关系 + 4 字辈 + 3 房支 + 1 来源）
+3. 启动 NestJS 服务
+
+#### 2. 部署前端到 Vercel
+
+1. 登录 [vercel.com](https://vercel.com)，新建 **Project**。
+2. 导入同一个 fork 的仓库。
+3. 在 **Root Directory** 设置中选择 `apps/web`。
+4. 在 **Environment Variables** 添加：
+   - `NEXT_PUBLIC_API_URL` = `https://openzupu-api-xxx.onrender.com/api`（替换为步骤 1 的 URL）
+5. Deploy。Vercel 会自动用 `apps/web/vercel.json` 里的配置构建。
+
+#### 3. 回到 Render 设置 CORS
+
+部署完前端后，记下 Vercel URL（如 `https://openzupu.vercel.app`），回到 Render 服务的环境变量：
+- `CORS_ORIGINS` = `https://openzupu.vercel.app`
+- 触发手动 redeploy（Render 会自动重启服务）
+
+### Demo 登录账号
+
+| 用户名 | 密码 | 角色 | 权限 |
+|---|---|---|---|
+| `admin` | `admin123` | 系统管理员 | 全局 ADMIN |
+| `zhang_curator` | `editor123` | 项目 OWNER | 张氏项目所有者 |
+| `guest` | `editor123` | 项目 VIEWER | 只读访客 |
+
+### Demo 项目结构
+
+- **项目名**: 张氏大成宗谱 · 江南支派
+- **数据**: 18 个人物（4 代）、27 条亲属关系、4 字辈、3 房支、1 来源文献、3 历史地名（南京/苏州/上海）
+- **特色**: 含 DNA 标记（Y-DNA `O-M122` + mtDNA `D4`），可在 Person 详情页测试「Genetic DNA Matches」遗传匹配功能
+
+---
+
 ## 联邦互证配置说明
 
 当张氏宗亲会与曹氏宗亲会均部署了本地 OpenZupu 实例后，系统管理员可在 **联邦管理 (Federation)** 面板中：

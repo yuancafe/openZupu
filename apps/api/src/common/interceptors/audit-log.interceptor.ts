@@ -113,6 +113,7 @@ export class AuditLogInterceptor implements NestInterceptor {
     if (pathLower.includes('/office-occupations')) return 'OFFICE_OCCUPATION';
     if (pathLower.includes('/institutions')) return 'INSTITUTION';
     if (pathLower.includes('/names')) return 'NAME';
+    if (pathLower.includes('/places')) return 'PLACE';
     if (pathLower.includes('/events')) return 'EVENT';
     if (pathLower.includes('/generations')) return 'GENERATION';
     if (pathLower.includes('/claims')) return 'CLAIM';
@@ -142,6 +143,7 @@ export class AuditLogInterceptor implements NestInterceptor {
       OFFICE_OCCUPATION: 'officeOccupation',
       INSTITUTION: 'institution',
       NAME: 'name',
+      PLACE: 'place',
       EVENT: 'event',
       GENERATION: 'generation',
       CLAIM: 'claim',

@@ -89,6 +89,80 @@ describe('ProjectMemberService', () => {
       expect(res.id).toBe('member-abc');
       expect(mockPrisma.projectMember.create).toHaveBeenCalled();
     });
+
+    it('should default role to EDITOR when not specified', async () => {
+      mockPrisma.user.findUnique.mockResolvedValue({ id: 'user-123' });
+      mockPrisma.project.findUnique.mockResolvedValue({ id: 'project-123' });
+      mockPrisma.projectMember.findUnique.mockResolvedValue(null);
+      mockPrisma.projectMember.create.mockResolvedValue({});
+
+      await service.create('project-123', { username: 'testuser' });
+
+      const createCall = mockPrisma.projectMember.create.mock.calls[0][0];
+      expect(createCall.data.role).toBe('EDITOR');
+    });
+
+    it('should look up user by userId when provided', async () => {
+      mockPrisma.user.findUnique.mockResolvedValue({ id: 'user-123' });
+      mockPrisma.project.findUnique.mockResolvedValue({ id: 'project-123' });
+      mockPrisma.projectMember.findUnique.mockResolvedValue(null);
+      mockPrisma.projectMember.create.mockResolvedValue({});
+
+      await service.create('project-123', {
+        userId: 'user-123',
+        role: 'VIEWER',
+      });
+
+      expect(mockPrisma.user.findUnique).toHaveBeenCalledWith({
+        where: { id: 'user-123' },
+      });
+    });
+
+    it('should look up user by email when provided', async () => {
+      mockPrisma.user.findUnique.mockResolvedValue({ id: 'user-456' });
+      mockPrisma.project.findUnique.mockResolvedValue({ id: 'project-123' });
+      mockPrisma.projectMember.findUnique.mockResolvedValue(null);
+      mockPrisma.projectMember.create.mockResolvedValue({});
+
+      await service.create('project-123', {
+        email: 'user@example.com',
+        role: 'EDITOR',
+      });
+
+      expect(mockPrisma.user.findUnique).toHaveBeenCalledWith({
+        where: { email: 'user@example.com' },
+      });
+    });
+
+    it('should return created member with user info', async () => {
+      mockPrisma.user.findUnique.mockResolvedValue({ id: 'user-123' });
+      mockPrisma.project.findUnique.mockResolvedValue({ id: 'project-123' });
+      mockPrisma.projectMember.findUnique.mockResolvedValue(null);
+      mockPrisma.projectMember.create.mockResolvedValue({
+        id: 'member-abc',
+        projectId: 'project-123',
+        userId: 'user-123',
+        role: 'EDITOR',
+        user: {
+          id: 'user-123',
+          username: 'testuser',
+          email: 'test@example.com',
+          role: 'USER',
+        },
+      });
+
+      const res = await service.create('project-123', {
+        username: 'testuser',
+        role: 'EDITOR',
+      });
+
+      expect(res.user).toEqual({
+        id: 'user-123',
+        username: 'testuser',
+        email: 'test@example.com',
+        role: 'USER',
+      });
+    });
   });
 
   describe('findAll', () => {
@@ -151,6 +225,31 @@ describe('ProjectMemberService', () => {
 
       const res = await service.remove('p1', 'm1');
       expect(res.id).toBe('m1');
+    });
+
+    it('should allow removing OWNER when more than 1 exists', async () => {
+      mockPrisma.projectMember.findUnique.mockResolvedValue({
+        id: 'm1',
+        projectId: 'p1',
+        userId: 'u1',
+        role: 'OWNER',
+      });
+      mockPrisma.projectMember.count.mockResolvedValue(2); // 2 owners exist
+      mockPrisma.projectMember.delete.mockResolvedValue({ id: 'm1' });
+
+      const res = await service.remove('p1', 'm1');
+      expect(res.id).toBe('m1');
+    });
+
+    it('should throw NotFoundException if member belongs to different project', async () => {
+      mockPrisma.projectMember.findUnique.mockResolvedValue({
+        id: 'm1',
+        projectId: 'OTHER_PROJECT',
+        userId: 'u1',
+        role: 'EDITOR',
+      });
+
+      await expect(service.remove('p1', 'm1')).rejects.toThrow(NotFoundException);
     });
   });
 });

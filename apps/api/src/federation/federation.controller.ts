@@ -14,6 +14,7 @@ import {
 import { ApiTags } from '@nestjs/swagger';
 import { AuthGuard } from '@nestjs/passport';
 import { FederationService } from './federation.service';
+import { Public } from '../auth/public.decorator';
 import {
   CreatePeerDto,
   FederatedSearchQueryDto,
@@ -26,6 +27,7 @@ export class FederationController {
   constructor(private readonly service: FederationService) {}
 
   // 1. PUBLIC search endpoint for peer OpenZupu instances (only searches deceased, rate limited via global throttler)
+  @Public()
   @Get('federation/search')
   async search(
     @Query() query: FederatedSearchQueryDto,

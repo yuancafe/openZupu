@@ -1,0 +1,41 @@
+# Render Blueprint — OpenZupu API
+# Deploy: https://render.com/deploy?repo=<your-github-url>
+#
+# Required environment variables (set in Render dashboard or .env):
+#   JWT_SECRET  — random 64-char string for JWT signing
+#
+# This blueprint provisions:
+#   1. PostgreSQL database (free tier)
+#   2. NestJS API web service (free tier with auto-sleep)
+
+databases:
+  - name: openzupu-db
+    databaseName: openzupu
+    user: openzupu
+    plan: free
+    ipAllowList: []  # only allow internal Render services
+
+services:
+  - type: web
+    name: openzupu-api
+    runtime: docker
+    plan: free
+    dockerfilePath: ./apps/api/Dockerfile
+    dockerContext: .
+    healthCheckPath: /api
+    autoDeploy: true
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: openzupu-db
+          property: connectionString
+      - key: JWT_SECRET
+        sync: false   # set manually in Render dashboard
+        value: "REPLACE_WITH_RANDOM_64_CHAR_SECRET"
+      - key: NODE_ENV
+        value: production
+      - key: CORS_ORIGINS
+        sync: false   # set to your Vercel URL after web deploy
+        value: ""
+      - key: PORT
+        value: "3001"
