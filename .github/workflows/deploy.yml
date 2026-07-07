@@ -1,0 +1,76 @@
+name: Deploy OpenZupu Demo
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  deploy-api:
+    name: Deploy API to Render
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Render Deploy Hook
+        run: |
+          echo "Triggering Render deploy hook..."
+          if [ -z "${{ secrets.RENDER_DEPLOY_HOOK_URL }}" ]; then
+            echo "::error::RENDER_DEPLOY_HOOK_URL secret is not set. Please add it to GitHub repo Settings → Secrets."
+            exit 1
+          fi
+          response=$(curl -s -o /dev/null -w "%{http_code}" -X POST "${{ secrets.RENDER_DEPLOY_HOOK_URL }}")
+          if [ "$response" = "200" ] || [ "$response" = "201" ] || [ "$response" = "204" ]; then
+            echo "✅ Render deploy triggered successfully (HTTP $response)"
+          else
+            echo "::error::Render deploy hook returned HTTP $response"
+            exit 1
+          fi
+
+  deploy-web:
+    name: Deploy Web to Vercel
+    runs-on: ubuntu-latest
+    needs: [deploy-api]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy to Vercel
+        uses: amondnet/vercel-action@v25
+        with:
+          vercel-token: ${{ secrets.VERCEL_TOKEN }}
+          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
+          working-directory: ./apps/web
+          vercel-args: '--prod'
+          alias-domains: ${{ secrets.VERCEL_ALIAS_DOMAIN }}
+
+      - name: Wait for Vercel deployment to propagate
+        run: sleep 30
+
+      - name: Trigger Render redeploy with new CORS origin
+        if: env.VERCEL_ALIAS_DOMAIN != ''
+        run: |
+          echo "Re-deploying API with CORS_ORIGINS=https://${{ secrets.VERCEL_ALIAS_DOMAIN }}"
+          # This step requires a second Render deploy hook that sets CORS_ORIGINS via env var override
+          # Render doesn't easily allow env override via deploy hook; user must set manually in dashboard
+          echo "::warning::Update CORS_ORIGINS manually in Render dashboard to: https://${{ secrets.VERCEL_ALIAS_DOMAIN }}"
+          echo "::warning::Or set RENDER_REDEPLOY_WITH_CORS_HOOK secret for automatic env override"
+
+      - name: Print deployment info
+        run: |
+          echo ""
+          echo "════════════════════════════════════════════════════════"
+          echo "  🚀 OpenZupu Demo Deployment Initiated"
+          echo "════════════════════════════════════════════════════════"
+          echo ""
+          echo "Backend API (Render):"
+          echo "  → \${{ secrets.RENDER_SERVICE_URL }}"
+          echo ""
+          echo "Frontend Web (Vercel):"
+          echo "  → https://\${{ secrets.VERCEL_ALIAS_DOMAIN }}"
+          echo ""
+          echo "⏳ Wait ~3 minutes for both deploys to complete"
+          echo ""
+          echo "📝 Demo Credentials:"
+          echo "  admin / admin123          (system ADMIN)"
+          echo "  zhang_curator / editor123  (project OWNER)"
+          echo "  guest / editor123          (VIEWER)"
+          echo "════════════════════════════════════════════════════════"
