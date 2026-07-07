@@ -156,6 +156,32 @@ docker-compose up --build -d
 
 ---
 
+### 🤖 自动部署（GitHub Actions）
+
+仓库已包含 `.github/workflows/deploy.yml`，**每次 push 到 main 分支自动部署**。
+
+需要在 GitHub 仓库配置以下 **5 个 Secrets**（路径：仓库 → Settings → Secrets and variables → Actions）：
+
+| Secret 名 | 值从哪里获取 |
+|---|---|
+| `RENDER_DEPLOY_HOOK_URL` | Render 服务 → Settings → Deploy Hook → Copy URL |
+| `RENDER_SERVICE_URL` | Render 给的服务 URL，如 `https://openzupu-api-xxx.onrender.com` |
+| `VERCEL_TOKEN` | [vercel.com/account/tokens](https://vercel.com/account/tokens) → Create Token |
+| `VERCEL_ORG_ID` | Vercel → Settings → General → Team ID |
+| `VERCEL_PROJECT_ID` | Vercel → Project → Settings → General → Project ID |
+| `VERCEL_ALIAS_DOMAIN` | 部署后的域名前缀，如 `openzupu-demo.vercel.app` |
+
+配置完成后：
+```bash
+git push origin main
+```
+GitHub Actions 会自动：
+1. 触发 Render deploy hook → Render 重建并重新跑 prisma db push + seed
+2. 用 Vercel CLI 部署 `apps/web` 到生产环境
+3. 打印两个 URL 到 Actions 日志末尾
+
+---
+
 ## 联邦互证配置说明
 
 当张氏宗亲会与曹氏宗亲会均部署了本地 OpenZupu 实例后，系统管理员可在 **联邦管理 (Federation)** 面板中：
