@@ -3,7 +3,15 @@
 // Run via: node prisma-seed.cjs  (called from apps/api/Dockerfile on first deploy)
 // Idempotent: skips if demo project already exists.
 
-const { PrismaClient } = require('@openzupu/database');
+let PrismaClient;
+try {
+  ({ PrismaClient } = require('@openzupu/database'));
+} catch (error) {
+  if (error.code !== 'MODULE_NOT_FOUND') {
+    throw error;
+  }
+  ({ PrismaClient } = require('../../packages/database/dist'));
+}
 
 const prisma = new PrismaClient();
 
