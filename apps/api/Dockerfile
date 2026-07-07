@@ -22,4 +22,4 @@ COPY --from=builder /app/apps/api/prisma-seed.cjs ./apps/api/prisma-seed.cjs
 
 EXPOSE 3001
 # Apply Prisma schema to the connected database on startup, then seed demo data if empty
-CMD sh -c "cd packages/database && node ../../node_modules/.bin/prisma db push --skip-generate --accept-data-loss && cd ../.. && node apps/api/prisma-seed.cjs && node apps/api/dist/main"
+CMD sh -c "cd packages/database && ./node_modules/.bin/prisma db push --skip-generate --accept-data-loss && cd ../.. && node apps/api/prisma-seed.cjs && node apps/api/dist/main.js"
