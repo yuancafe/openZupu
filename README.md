@@ -31,7 +31,7 @@
 
 - **前端**：Next.js 16 (App Router) + Tailwind CSS + Lucide Icons + React
 - **后端**：NestJS 11 + Passport JWT (HttpOnly Cookies) + Class Validator
-- **数据层**：Prisma ORM + SQLite (开发/单机) / PostgreSQL (生产兼容)
+- **数据层**：Prisma ORM + **PostgreSQL** (开发 + 生产一致) — Render 自动管理
 - **AI/OCR**：Tesseract.js (传统中文/简体中文本地识别)
 - **构建工具**：Turborepo (Monorepo 管理) + pnpm
 
