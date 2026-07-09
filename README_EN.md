@@ -92,6 +92,35 @@ After starting:
 - Backend API Endpoint: [http://localhost:3001](http://localhost:3001)
 - Swagger OpenAPI Docs: [http://localhost:3001/api/docs](http://localhost:3001/api/docs)
 
+## ☁️ Live Demo & Cloud Deployment
+
+To easily explore OpenZupu without installing anything, we provide a live demonstration environment preloaded with a large mock database containing cross-clan relationships:
+
+**🎯 Live Demo Link**: **[https://openzupu-demo-web.vercel.app/](https://openzupu-demo-web.vercel.app/)**
+
+### Demo Login Accounts
+We provision three demo users with different roles:
+
+| Username | Password | Role | Description |
+|---|---|---|---|
+| `admin` | `admin123` | System Admin | Full system administrator privileges. Can manage users and configure languages. |
+| `zhang_curator` | `editor123` | Project Owner | Owner of the Zhang Clan project. Can edit members, places, and kinship. |
+| `guest` | `editor123` | Project Viewer | Read-only access to view charts, list cards, and explore matches. |
+
+### Rich Demo Scenarios with 200+ Individuals
+The live database includes 4 distinct projects and **210 individuals** with over 400 kinship/social lines:
+
+1. **Adoption & Genetic Verification (Surname A adopted into Surname B)**
+   - **Genealogical Records**: In **"张氏大成宗谱 · 江南支派" (Zhang Clan)**, the 14th gen member `Zhang Yuxuan` (born 1902) is recorded as adopted out to the Wang Clan. In **"王氏宗谱 · 豫章支派" (Wang Clan)**, `Wang Yuxuan` is enrolled as the adopted heir of Wang Tinglan.
+   - **DNA Match Check**: Since `Wang Yuxuan` was biologically born in the Zhang Clan, he carries and passes down the patrilineal **Y-DNA haplogroup `O-M122`**. Viewing the page of his living great-grandson `Wang Shaoxiang` (Wang Clan) triggers a **100% Y-STR match** with `Zhang Haoran` (Zhang Clan editor), scientifically verifying the written adoption record across databases!
+2. **Cross-Project Marriages (Female marriage & multi-clan descendants)**
+   - **Inter-clan Union**: In **"李氏家乘 · 吴郡支派" (Li Clan)**, `Li Wannian` married `Zhang Zhiya` from the Zhang Clan project.
+   - **Matrilineal Tracing**: Their son `Li Huai` (in the Li Clan project) has a biological mother relationship linking directly across projects to `Zhang Zhiya` (in the Zhang Clan project).
+3. **Classmates & Non-Kinship Social Network**
+   - **School Links**: `Zhang Zhixin` (Zhang Clan) and `Chen Huaizu` (Chen Clan) are recorded as classmates at Shanghai Nanyang Public School (class of 1905), demonstrating historical social networks.
+4. **Scale Testing with 200+ Nodes**
+   - Over 180 descendants programmatically generated to test large-scale tree rendering, smooth scrolling, and pagination.
+
 ---
 
 ## Containerized Deployment (Docker)
