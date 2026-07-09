@@ -78,3 +78,11 @@ data/*.db-journal
 # Turborepo
 .turbo/
 .cache-home/
+
+# Memos / Qdrant local memory
+.memos/
+.memos/qdrant/
+
+# Internal Audit Reviews and PRDs
+docs/REVIEW_*
+docs/OpenZupu PRD.md

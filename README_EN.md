@@ -9,6 +9,12 @@
 ## Key Features
 
 - 🏠 **Ready-to-use Lightweight Architecture**: Built on NestJS + Next.js + Prisma + PostgreSQL, making it suitable for local development, private deployments, and the Render demo stack.
+- 🏮 **Chinese Vertical Pedigree & Printing (V1.5)**:
+  - Supports standard **Su-Style Lineage Pedigree Chart** (vertical text reading, columns flowing from right to left, side-by-side spouse rendering) and **Ou-Style Details Registry** (detailed columnar textual cards with classical red borders).
+  - Built-in custom settings to configure generation range, select branch roots, filter living persons (privacy shield), and triggers clean **A4 landscape printing layout** via `@media print`.
+- 🖼️ **Multimedia Avatars & Portraits (V1.4)**:
+  - Enables uploading, cropping, and viewing ancestor portrait photos, securely saved as Base64 strings directly in the relational database.
+  - Automatically displays mini-avatars inside Tree nodes with custom color-coded borders (blue for male, rose for female).
 - 🔒 **Enterprise-grade Security**:
   - Employs completely isolated **HttpOnly Cookies + Refresh Token Rotation** to fully eliminate XSS attacks stealing credentials from localStorage.
   - Granular RBAC project access control (OWNER, ADMIN, EDITOR, VIEWER) combined with double-guard validation checks on service-layer writes and deletions.

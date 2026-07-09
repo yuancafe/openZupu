@@ -9,6 +9,12 @@
 ## 核心特性
 
 - 🏠 **开箱即用与轻量架构**：基于 NestJS + Next.js + Prisma + SQLite，完美支持本地单机或局域网私有化部署。
+- 🏮 **中式竖排世系与打印排版 (V1.5)**：
+  - 完美实现传统的 **苏式行序世系图**（竖排右起流式展示，配偶并联，父子连线）与 **欧式房志世系记**（古雅朱砂线分栏详记，文字竖写自右向左）。
+  - 内置定制控制台，支持指定世代范围、筛选出嗣房支、隐藏在世成员（隐私保护），并支持 `@media print` 呼出标准的 **A4横向打印排版**。
+- 🖼️ **多媒体头像与生平照片 (V1.4)**：
+  - 允许为族人录入并上传生平照片，通过 Base64 编码在关系型数据库中无损安全持久化。
+  - 在后代世系树和祖先树节点中自动展示微缩头像，并以蓝色（男）/粉色（女）边框渲染。
 - 🔒 **工业级安全设计**：
   - 采用完全隔离的 **HttpOnly Cookies + Refresh Token 旋转机制**，从根本上杜绝了 localStorage 被 XSS 攻击窃取 Token 的风险。
   - 基于角色（OWNER, ADMIN, EDITOR, VIEWER）的严格 RBAC 项目准入校验，控制到服务底层的双重访问守卫防御。
@@ -153,7 +159,7 @@ docker-compose up --build -d
 
 部署时 Dockerfile 会自动：
 1. 跑 `prisma db push` 创建表结构
-2. 跑 `prisma-seed.cjs` 写入**张氏大成宗谱 · 江南支派** demo 数据（3 兄弟 + 6 配偶 + 6 孙辈 + 2 在世曾孙 = 18 人物 + 27 亲属关系 + 4 字辈 + 3 房支 + 1 来源）
+2. 跑 `prisma-seed.cjs` 写入 4 个宗族的 Demo 数据，包含 210 位人物，重点覆盖出嗣/承嗣关联、跨谱联姻、同届同窗社交关系以及 DNA 基因匹配数据。
 3. 启动 NestJS 服务
 
 #### 2. 部署前端到 Vercel
@@ -167,7 +173,7 @@ docker-compose up --build -d
 
 #### 3. 检查 Render CORS
 
-`render.yaml` 已默认允许当前 demo 项目的 Vercel 域名：
+`render.yaml` 已默认允许当前 demo 项目 the Vercel 域名：
 - `https://openzupu-demo-web.vercel.app`
 - `https://openzupu-demo-web-yuancafes-projects.vercel.app`
 - `https://openzupu-demo-web-git-main-yuancafes-projects.vercel.app`
@@ -184,9 +190,9 @@ docker-compose up --build -d
 
 ### Demo 项目结构
 
-- **项目名**: 张氏大成宗谱 · 江南支派
-- **数据**: 18 个人物（4 代）、27 条亲属关系、4 字辈、3 房支、1 来源文献、3 历史地名（南京/苏州/上海）
-- **特色**: 含 DNA 标记（Y-DNA `O-M122` + mtDNA `D4`），可在 Person 详情页测试「Genetic DNA Matches」遗传匹配功能
+- **包含项目**: 4个独立项目（张氏、李氏、陈氏、王氏宗谱）
+- **数据**: 共计 210 个人物、400+ 条亲属与社交关系线、Y-DNA/mtDNA 遗传标记、出嗣与跨项目婚姻节点。
+- **特色**: 支持 Y-DNA `O-M122` 基因同宗匹配，并在世系树与世系记中支持多媒体头像显示及中式竖排打印。
 
 ---
 
