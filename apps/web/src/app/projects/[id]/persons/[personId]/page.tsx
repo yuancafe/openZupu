@@ -415,19 +415,22 @@ export default function PersonDetails({ params }: { params: Promise<{ id: string
         {/* LEFT COLUMN: Basic Identity Summary & DNA / Relations */}
         <div className="space-y-6 lg:col-span-1">
           {/* Main Visual Box */}
-          <div className="bg-white p-6 rounded-lg border border-slate-200 shadow-sm text-center space-y-4">
-            <div className="w-24 h-24 rounded-full overflow-hidden mx-auto shadow-md border-2 border-white ring-2 ring-blue-100 flex items-center justify-center bg-slate-50 relative group">
+          <div className="relative overflow-hidden bg-gradient-to-b from-[#faf9f6] to-[#f4f2eb] p-6 rounded-2xl border border-amber-900/10 shadow-sm text-center space-y-4">
+            {/* Fine border design mimicking old paper/scroll */}
+            <div className="absolute inset-2 border border-dashed border-amber-900/15 pointer-events-none rounded-xl"></div>
+            
+            <div className="relative z-10 w-28 h-28 rounded-full overflow-hidden mx-auto shadow-md border-4 border-white ring-4 ring-amber-500/10 flex items-center justify-center bg-slate-50 group">
               {person.avatarUrl ? (
                 <img src={person.avatarUrl} alt={person.givenName || "Avatar"} className="w-full h-full object-cover" />
               ) : (
-                <span className="text-4xl text-blue-700 font-bold">
+                <span className="text-4xl text-amber-800 font-serif font-bold">
                   {person.surname ? person.surname[0] : (person.givenName ? person.givenName[0] : "👤")}
                 </span>
               )}
             </div>
             
-            <div className="flex flex-col items-center">
-              <label className="cursor-pointer bg-slate-50 hover:bg-slate-100 text-slate-600 border border-slate-200 rounded-md px-3 py-1 text-xs font-semibold shadow-sm transition-all flex items-center gap-1.5">
+            <div className="relative z-10 flex flex-col items-center">
+              <label className="cursor-pointer bg-white hover:bg-slate-50 active:scale-95 text-amber-900 border border-amber-800/15 rounded-xl px-3 py-1.5 text-xs font-bold shadow-sm transition-all flex items-center gap-1.5">
                 📷 {t("uploadAvatarBtn")}
                 <input
                   type="file"
@@ -468,27 +471,27 @@ export default function PersonDetails({ params }: { params: Promise<{ id: string
                       console.error(err);
                     }
                   }}
-                  className="text-[10px] text-rose-500 hover:text-rose-700 font-bold mt-1.5"
+                  className="text-[10px] text-rose-600 hover:text-rose-800 font-bold mt-2"
                 >
                   {t("delete")}
                 </button>
               )}
             </div>
 
-            <div>
-              <h2 className="text-2xl font-bold text-slate-900">
+            <div className="relative z-10">
+              <h2 className="text-2xl font-serif font-bold text-slate-900 tracking-wide">
                 {person.surname ? `${person.surname} ` : ""}{person.givenName || "Unnamed"}
               </h2>
-              <p className="text-xs text-slate-400 mt-1 font-mono">{person.id}</p>
+              <p className="text-[10px] text-slate-400 mt-1 font-mono uppercase tracking-wider">ID: {person.id.slice(0, 8)}...</p>
             </div>
-            <div className="flex justify-center gap-2">
-              <span className={`px-2.5 py-0.5 rounded text-xs font-semibold ${
-                person.sex === "MALE" || person.sex === "Male" ? "bg-blue-100 text-blue-800" : person.sex === "FEMALE" || person.sex === "Female" ? "bg-rose-100 text-rose-800" : "bg-slate-100 text-slate-800"
+            <div className="relative z-10 flex justify-center gap-2">
+              <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold border ${
+                person.sex === "MALE" || person.sex === "Male" ? "bg-blue-50 text-blue-700 border-blue-100" : person.sex === "FEMALE" || person.sex === "Female" ? "bg-rose-50 text-rose-700 border-rose-100" : "bg-slate-50 text-slate-700 border-slate-100"
               }`}>
                 {person.sex === "MALE" || person.sex === "Male" ? t("male") : person.sex === "FEMALE" || person.sex === "Female" ? t("female") : t("unknown")}
               </span>
-              <span className={`px-2.5 py-0.5 rounded text-xs font-semibold ${
-                person.isLiving ? "bg-green-100 text-green-800" : "bg-slate-100 text-slate-800"
+              <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold border ${
+                person.isLiving ? "bg-green-50 text-green-700 border-green-100" : "bg-slate-50 text-slate-700 border-slate-100"
               }`}>
                 {person.isLiving ? t("living") : t("deceased")}
               </span>

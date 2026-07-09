@@ -691,43 +691,58 @@ export default function ProjectDetails({ params }: { params: Promise<{ id: strin
   };
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 animate-fade-in">
       {/* Project Header */}
-      <div>
-        <h2 className="text-3xl font-bold tracking-tight text-slate-900">{project.name}</h2>
-        <p className="text-slate-500 mt-2 text-lg">{project.description || t("noProjects")}</p>
+      <div className="relative bg-[#faf8f5] border border-amber-900/10 p-6 rounded-2xl shadow-sm overflow-hidden">
+        {/* Archival seal overlay style */}
+        <div className="absolute right-6 top-1/2 -translate-y-1/2 text-7xl select-none opacity-[0.03] font-serif" style={{ writingMode: "vertical-rl" }}>
+          開元族譜
+        </div>
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <div>
+            <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200/40">
+              📂 {project.projectType || "FAMILY"} REPOSITORY
+            </span>
+            <h2 className="text-3xl font-serif font-extrabold text-slate-900 mt-2 tracking-tight">
+              {project.name}
+            </h2>
+            <p className="text-slate-500 mt-2 text-base leading-relaxed max-w-3xl">
+              {project.description || t("noProjects")}
+            </p>
+          </div>
+        </div>
       </div>
 
       {/* Tabs */}
-      <div className="flex border-b border-slate-200">
+      <div className="flex flex-wrap gap-2 p-1.5 bg-slate-100/80 rounded-xl border border-slate-200/50 max-w-2xl">
         <button
           onClick={() => setActiveTab("list")}
-          className={`py-2 px-4 font-medium text-sm transition-all ${
-            activeTab === "list" ? "border-b-2 border-blue-600 text-blue-600 font-semibold" : "text-slate-500 hover:text-slate-700"
+          className={`py-2 px-4 rounded-lg font-bold text-sm transition-all duration-300 ${
+            activeTab === "list" ? "bg-slate-900 text-white shadow-md" : "text-slate-600 hover:text-slate-850 hover:bg-slate-200/50"
           }`}
         >
-          📁 {t("personListTab")}
+          📂 {t("personListTab")}
         </button>
         <button
           onClick={() => setActiveTab("tree")}
-          className={`py-2 px-4 font-medium text-sm transition-all ${
-            activeTab === "tree" ? "border-b-2 border-blue-600 text-blue-600 font-semibold" : "text-slate-500 hover:text-slate-700"
+          className={`py-2 px-4 rounded-lg font-bold text-sm transition-all duration-300 ${
+            activeTab === "tree" ? "bg-slate-900 text-white shadow-md" : "text-slate-600 hover:text-slate-850 hover:bg-slate-200/50"
           }`}
         >
           🌿 {t("familyTreeTab")}
         </button>
         <button
           onClick={() => setActiveTab("members")}
-          className={`py-2 px-4 font-medium text-sm transition-all ${
-            activeTab === "members" ? "border-b-2 border-blue-600 text-blue-600 font-semibold" : "text-slate-500 hover:text-slate-700"
+          className={`py-2 px-4 rounded-lg font-bold text-sm transition-all duration-300 ${
+            activeTab === "members" ? "bg-slate-900 text-white shadow-md" : "text-slate-600 hover:text-slate-850 hover:bg-slate-200/50"
           }`}
         >
           👥 {t("membersTab")}
         </button>
         <button
           onClick={() => setActiveTab("tools")}
-          className={`py-2 px-4 font-medium text-sm transition-all ${
-            activeTab === "tools" ? "border-b-2 border-blue-600 text-blue-600 font-semibold" : "text-slate-500 hover:text-slate-700"
+          className={`py-2 px-4 rounded-lg font-bold text-sm transition-all duration-300 ${
+            activeTab === "tools" ? "bg-slate-900 text-white shadow-md" : "text-slate-600 hover:text-slate-850 hover:bg-slate-200/50"
           }`}
         >
           🛠️ {t("dataToolsTab")}
@@ -840,50 +855,81 @@ export default function ProjectDetails({ params }: { params: Promise<{ id: strin
             </div>
           )}
 
-          <div className="p-0">
-            <table className="w-full text-left text-sm">
-              <thead className="bg-slate-50 border-b border-slate-200">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm border-collapse">
+              <thead className="bg-[#fafafa] border-b border-slate-100 text-slate-500">
                 <tr>
-                  <th className="px-6 py-3 font-medium text-slate-500">{t("name")}</th>
-                  <th className="px-6 py-3 font-medium text-slate-500">{t("gender")}</th>
-                  <th className="px-6 py-3 font-medium text-slate-500">{t("lifetime")}</th>
-                  <th className="px-6 py-3 font-medium text-slate-500">{t("status")}</th>
-                  <th className="px-6 py-3 font-medium text-slate-500 text-right">{t("actions")}</th>
+                  <th className="px-6 py-3.5 font-bold uppercase tracking-wider text-xs">{t("name")}</th>
+                  <th className="px-6 py-3.5 font-bold uppercase tracking-wider text-xs">{t("gender")}</th>
+                  <th className="px-6 py-3.5 font-bold uppercase tracking-wider text-xs">{t("lifetime")}</th>
+                  <th className="px-6 py-3.5 font-bold uppercase tracking-wider text-xs">{t("status")}</th>
+                  <th className="px-6 py-3.5 font-bold uppercase tracking-wider text-xs text-right">{t("actions")}</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-200">
+              <tbody className="divide-y divide-slate-100">
                 {persons.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="px-6 py-12 text-center text-slate-500">
-                      {t("noPersons")}
+                    <td colSpan={5} className="px-6 py-12 text-center text-slate-400 bg-white">
+                      <span className="text-xl">👤</span>
+                      <p className="mt-1">{t("noPersons")}</p>
                     </td>
                   </tr>
                 ) : (
-                  persons.map((person) => (
-                    <tr key={person.id} className="hover:bg-slate-50">
-                      <td className="px-6 py-4 font-semibold text-slate-900">
-                        {person.surname ? `${person.surname} ` : ""}{person.givenName || "Unnamed"}
-                      </td>
-                      <td className="px-6 py-4 text-slate-600">
-                        {person.sex === "MALE" || person.sex === "Male" ? t("male") : person.sex === "FEMALE" || person.sex === "Female" ? t("female") : t("unknown")}
-                      </td>
-                      <td className="px-6 py-4 text-slate-600">
-                        {person.birthDate || "?"} to {person.deathDate || (person.isLiving ? t("living") : t("deceased"))}
-                      </td>
-                      <td className="px-6 py-4 text-slate-600">
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${
-                          person.isLiving ? "bg-green-100 text-green-800" : "bg-slate-100 text-slate-800"
-                        }`}>
-                          {person.isLiving ? t("living") : t("deceased")}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-right">
-                        <Link href={`/projects/${project.id}/persons/${person.id}`} className="text-blue-600 hover:text-blue-800 font-semibold text-sm">
-                          {t("detailsLink")} &rarr;
-                        </Link>
-                      </td>
-                    </tr>
-                  ))
+                  persons.map((person) => {
+                    const isMale = person.sex === "MALE" || person.sex === "Male";
+                    const isFemale = person.sex === "FEMALE" || person.sex === "Female";
+                    return (
+                      <tr key={person.id} className="hover:bg-slate-50/70 transition-colors group">
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-3">
+                            {/* Visual avatar with color-coded ring */}
+                            <div className={`w-10 h-10 rounded-full overflow-hidden flex items-center justify-center bg-slate-50 border border-white shadow-sm shrink-0 ring-2 ${
+                              isMale ? "ring-blue-100" : isFemale ? "ring-rose-100" : "ring-slate-100"
+                            }`}>
+                              {person.avatarUrl ? (
+                                <img src={person.avatarUrl} alt="" className="w-full h-full object-cover" />
+                              ) : (
+                                <span className={`text-base font-bold ${
+                                  isMale ? "text-blue-600" : isFemale ? "text-rose-600" : "text-slate-500"
+                                }`}>
+                                  {person.surname ? person.surname[0] : (person.givenName ? person.givenName[0] : "👤")}
+                                </span>
+                              )}
+                            </div>
+                            <div>
+                              <Link href={`/projects/${project.id}/persons/${person.id}`} className="font-serif font-bold text-slate-900 group-hover:text-amber-800 transition-colors hover:underline text-[15px]">
+                                {person.surname ? `${person.surname} ` : ""}{person.givenName || "Unnamed"}
+                              </Link>
+                              <span className="text-[10px] text-slate-400 block mt-0.5 font-mono">{person.generationName || ""} Generation</span>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold ${
+                            isMale ? "bg-blue-50 text-blue-700" : isFemale ? "bg-rose-50 text-rose-700" : "bg-slate-50 text-slate-600"
+                          }`}>
+                            <span>{isMale ? "👨" : isFemale ? "👩" : "👤"}</span>
+                            <span>{isMale ? t("male") : isFemale ? t("female") : t("unknown")}</span>
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-slate-600 font-mono text-xs">
+                          📅 {person.birthDate ? person.birthDate : "?"} &mdash; {person.deathDate ? person.deathDate : (person.isLiving ? t("living") : t("deceased"))}
+                        </td>
+                        <td className="px-6 py-4">
+                          <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-bold ${
+                            person.isLiving ? "bg-green-50 text-green-700 border border-green-200/40" : "bg-slate-100 text-slate-700"
+                          }`}>
+                            {person.isLiving ? t("living") : t("deceased")}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-right">
+                          <Link href={`/projects/${project.id}/persons/${person.id}`} className="inline-flex items-center text-amber-700 hover:text-amber-900 font-bold text-xs group-hover:translate-x-1 transition-transform">
+                            {t("detailsLink")} &rarr;
+                          </Link>
+                        </td>
+                      </tr>
+                    );
+                  })
                 )}
               </tbody>
             </table>
