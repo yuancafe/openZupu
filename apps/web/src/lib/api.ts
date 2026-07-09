@@ -29,6 +29,7 @@ export const setAuthSession = (data: any) => {
   if (data?.user) {
     localStorage.setItem('user', JSON.stringify(data.user));
   }
+  window.dispatchEvent(new Event('openzupu-auth-change'));
 };
 
 export const clearAuthSession = () => {
@@ -39,6 +40,7 @@ export const clearAuthSession = () => {
   localStorage.removeItem('access_token');
   localStorage.removeItem('refresh_token');
   localStorage.removeItem('user');
+  window.dispatchEvent(new Event('openzupu-auth-change'));
 };
 
 const authHeader = () => {

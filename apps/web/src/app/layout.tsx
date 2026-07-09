@@ -11,10 +11,13 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<any>(null);
 
   useEffect(() => {
-    const userStr = localStorage.getItem("user");
-    if (userStr) {
-      setUser(JSON.parse(userStr));
-    }
+    const syncUser = () => {
+      const userStr = localStorage.getItem("user");
+      setUser(userStr ? JSON.parse(userStr) : null);
+    };
+    syncUser();
+    window.addEventListener("openzupu-auth-change", syncUser);
+    return () => window.removeEventListener("openzupu-auth-change", syncUser);
   }, []);
 
   const handleSignOut = async () => {
