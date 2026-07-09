@@ -134,6 +134,7 @@ model Person {
 
   federatedId         String?
   externalLink        String?
+  avatarUrl           String?
 
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt

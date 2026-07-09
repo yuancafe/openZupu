@@ -39,6 +39,12 @@ export default function ProjectDetails({ params }: { params: Promise<{ id: strin
   const [gedcomFile, setGedcomFile] = useState<File | null>(null);
   const [importStatus, setImportStatus] = useState({ text: "", isError: false, loading: false });
 
+  // V1.5 Traditional Chinese Pedigree settings
+  const [minGen, setMinGen] = useState<number>(1);
+  const [maxGen, setMaxGen] = useState<number>(10);
+  const [selectedBranchId, setSelectedBranchId] = useState<string>("");
+  const [excludeLiving, setExcludeLiving] = useState<boolean>(false);
+
   const fetchProjectData = () => {
     apiFetch(`/projects/${unwrappedParams.id}`)
       .then((res) => res.json())
@@ -312,16 +318,33 @@ export default function ProjectDetails({ params }: { params: Promise<{ id: strin
           ? "bg-white border-slate-200 shadow-sm hover:border-blue-400"
           : "bg-slate-50 border-slate-200 border-dashed"
       }`}>
-        <span className="text-[10px] uppercase tracking-wider font-semibold text-slate-400">{title}</span>
+        <span className="text-[10px] uppercase tracking-wider font-semibold text-slate-400 mb-2">{title}</span>
+        {person && (
+          <div className={`w-10 h-10 rounded-full overflow-hidden flex items-center justify-center bg-slate-50 border-2 mb-1.5 ${
+            person.sex === "MALE" || person.sex === "Male"
+              ? "border-blue-200 text-blue-700"
+              : person.sex === "FEMALE" || person.sex === "Female"
+              ? "border-rose-200 text-rose-700"
+              : "border-slate-200 text-slate-600"
+          }`}>
+            {person.avatarUrl ? (
+              <img src={person.avatarUrl} alt="" className="w-full h-full object-cover" />
+            ) : (
+              <span className="text-sm font-bold">
+                {person.surname ? person.surname[0] : (person.givenName ? person.givenName[0] : "👤")}
+              </span>
+            )}
+          </div>
+        )}
         {person ? (
-          <Link href={`/projects/${project.id}/persons/${person.id}`} className="mt-1 font-medium text-slate-800 hover:text-blue-600 block">
+          <Link href={`/projects/${project.id}/persons/${person.id}`} className="font-semibold text-slate-800 hover:text-blue-600 block text-sm">
             {person.surname ? `${person.surname} ` : ""}{person.givenName || "Unnamed"}
           </Link>
         ) : (
-          <span className="text-slate-400 mt-1 text-sm italic">Unknown</span>
+          <span className="text-slate-400 text-xs italic">Unknown</span>
         )}
         {person && (
-          <span className="text-[11px] text-slate-500 mt-0.5">
+          <span className="text-[10px] text-slate-500 mt-0.5">
             {person.birthDate ? person.birthDate.split("-")[0] : "?"} - {person.deathDate ? person.deathDate.split("-")[0] : person.isLiving ? t("living") : "?"}
           </span>
         )}
@@ -358,8 +381,17 @@ export default function ProjectDetails({ params }: { params: Promise<{ id: strin
         {/* Root (Gen 0) */}
         <div className="w-full max-w-xs">
           <div className="p-5 rounded-lg border-2 border-blue-500 bg-blue-50/50 shadow-sm flex flex-col items-center justify-center text-center">
-            <span className="text-[10px] uppercase tracking-wider font-semibold text-blue-500">{t("rootPersonLabel")}</span>
-            <Link href={`/projects/${project.id}/persons/${self.id}`} className="mt-1 font-bold text-blue-900 hover:text-blue-700 block text-lg">
+            <span className="text-[10px] uppercase tracking-wider font-semibold text-blue-500 mb-2">{t("rootPersonLabel")}</span>
+            <div className={`w-12 h-12 rounded-full overflow-hidden flex items-center justify-center bg-slate-50 border-2 mb-2 border-blue-300`}>
+              {self.avatarUrl ? (
+                <img src={self.avatarUrl} alt="" className="w-full h-full object-cover" />
+              ) : (
+                <span className="text-base font-bold text-blue-700">
+                  {self.surname ? self.surname[0] : (self.givenName ? self.givenName[0] : "👤")}
+                </span>
+              )}
+            </div>
+            <Link href={`/projects/${project.id}/persons/${self.id}`} className="font-bold text-blue-900 hover:text-blue-700 block text-lg">
               {self.surname ? `${self.surname} ` : ""}{self.givenName || "Unnamed"}
             </Link>
             <span className="text-xs text-blue-700 mt-1">
@@ -382,34 +414,52 @@ export default function ProjectDetails({ params }: { params: Promise<{ id: strin
 
     return (
       <div key={person.id} className="pl-6 border-l-2 border-slate-200/60 my-2 relative">
-        <div className="flex items-center space-x-2 bg-white border border-slate-200/80 rounded-lg p-2.5 shadow-sm hover:border-slate-300 w-fit">
+        <div className="flex items-center space-x-3 bg-white border border-slate-200/80 rounded-lg p-2.5 shadow-sm hover:border-slate-300 w-fit">
           {children.length > 0 && (
             <button
               onClick={() => toggleNode(person.id)}
-              className="text-slate-400 hover:text-slate-600 focus:outline-none text-xs font-bold w-4 h-4 flex items-center justify-center border border-slate-200 rounded"
+              className="text-slate-400 hover:text-slate-600 focus:outline-none text-xs font-bold w-4 h-4 flex items-center justify-center border border-slate-200 rounded mr-0.5"
             >
               {isExpanded ? "−" : "+"}
             </button>
           )}
-          <span className={`w-2.5 h-2.5 rounded-full ${
+          
+          <div className={`w-8 h-8 rounded-full overflow-hidden flex items-center justify-center bg-slate-50 border-2 ${
             person.sex === "MALE" || person.sex === "Male"
-              ? "bg-blue-400"
+              ? "border-blue-200 text-blue-700"
               : person.sex === "FEMALE" || person.sex === "Female"
-              ? "bg-rose-400"
-              : "bg-slate-400"
-          }`} />
-          <Link href={`/projects/${project.id}/persons/${person.id}`} className="font-semibold text-slate-800 hover:text-blue-600">
-            {person.surname ? `${person.surname} ` : ""}{person.givenName || "Unnamed"}
-          </Link>
-          {person.birthDate && (
-            <span className="text-xs text-slate-400">
-              * {person.birthDate.split("-")[0]}
-            </span>
-          )}
+              ? "border-rose-200 text-rose-700"
+              : "border-slate-200 text-slate-600"
+          }`}>
+            {person.avatarUrl ? (
+              <img src={person.avatarUrl} alt="" className="w-full h-full object-cover" />
+            ) : (
+              <span className="text-[10px] font-bold">
+                {person.surname ? person.surname[0] : (person.givenName ? person.givenName[0] : "👤")}
+              </span>
+            )}
+          </div>
+
+          <div>
+            <Link href={`/projects/${project.id}/persons/${person.id}`} className="font-semibold text-slate-800 hover:text-blue-600 block text-sm">
+              {person.surname ? `${person.surname} ` : ""}{person.givenName || "Unnamed"}
+            </Link>
+            {person.birthDate && (
+              <span className="text-[10px] text-slate-400 block -mt-0.5">
+                生卒: {person.birthDate.split("-")[0]} - {person.deathDate ? person.deathDate.split("-")[0] : (person.isLiving ? t("living") : "?")}
+              </span>
+            )}
+          </div>
+
           {spouses.length > 0 && (
-            <span className="text-xs text-slate-400 italic">
-              ({t("spouseLabel")}: {spouses.map((s: any) => `${s.surname || ""}${s.givenName || "Unnamed"}`).join(", ")})
-            </span>
+            <div className="flex items-center space-x-1 border-l border-slate-100 pl-2 ml-1 text-slate-400 text-xs">
+              <span>⚭</span>
+              {spouses.map((s: any) => (
+                <Link key={s.id} href={`/projects/${project.id}/persons/${s.id}`} className="hover:text-blue-600 font-medium">
+                  {s.surname || ""}{s.givenName || "Unnamed"}
+                </Link>
+              ))}
+            </div>
           )}
         </div>
 
@@ -467,6 +517,177 @@ export default function ProjectDetails({ params }: { params: Promise<{ id: strin
     }
 
     return computedRows;
+  };
+
+  // V1.5 Traditional Chinese Pedigree Rendering Helpers
+  const renderVerticalTreeNode = (person: any, currentGenNum = 1): React.ReactNode => {
+    if (currentGenNum < minGen || currentGenNum > maxGen) return null;
+    if (excludeLiving && person.isLiving) return null;
+
+    const children = getChildren(person.id);
+    const spouses = getSpouses(person.id);
+
+    return (
+      <div key={person.id} className="flex flex-row-reverse items-center relative my-4">
+        {/* Vertical Person card on the right */}
+        <div className="relative z-10 bg-[#fdfbf7] border-double border-4 border-red-700/80 p-3 flex flex-col items-center justify-center min-h-[140px] w-14 rounded shadow-sm select-none hover:border-red-950 transition-colors" style={{ writingMode: "vertical-rl" }}>
+          {person.avatarUrl && (
+            <img src={person.avatarUrl} alt="" className="w-8 h-8 rounded-full object-cover mb-2 border border-red-200" style={{ writingMode: "horizontal-tb" }} />
+          )}
+          <span className="text-[9px] font-bold text-red-600 uppercase mb-1">{person.rankInSiblings || "子"}</span>
+          <span className="text-sm font-bold text-slate-900 tracking-wider">
+            <Link href={`/projects/${project.id}/persons/${person.id}`} className="hover:underline">
+              {person.surname}{person.givenName}
+            </Link>
+          </span>
+          <span className="text-[8px] text-slate-400 font-mono mt-1">
+            {person.birthDate ? person.birthDate.split("-")[0] : ""}生
+          </span>
+        </div>
+
+        {/* Spouse details stacked next to husband in traditional format */}
+        {spouses.length > 0 && (
+          <div className="flex flex-col gap-1 mr-1 justify-center">
+            {spouses.map((s: any) => (
+              <div key={s.id} className="bg-[#fefefc] border border-dashed border-red-400 p-2 flex flex-col items-center justify-center text-[11px] w-9 rounded" style={{ writingMode: "vertical-rl" }}>
+                <span className="text-red-500 font-medium">配</span>
+                <Link href={`/projects/${project.id}/persons/${s.id}`} className="font-semibold text-slate-800 hover:underline">
+                  {s.surname || ""}{s.givenName || "氏"}
+                </Link>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Connecting horizontal line to the children group to the left */}
+        {children.length > 0 && currentGenNum < maxGen && (
+          <div className="w-8 h-0.5 bg-red-600/80"></div>
+        )}
+
+        {/* Children column stacked vertically on the left */}
+        {children.length > 0 && currentGenNum < maxGen && (
+          <div className="flex flex-col border-r-2 border-red-500/80 pr-6 relative space-y-2">
+            {children.map((child: any) => {
+              const childNode = renderVerticalTreeNode(child, currentGenNum + 1);
+              if (!childNode) return null;
+              return (
+                <div key={child.id} className="relative">
+                  {/* Horizontal sibling branch line linking child to vertical sibling column line */}
+                  <div className="absolute top-1/2 -right-6 w-6 h-0.5 bg-red-500/80 -translate-y-1/2"></div>
+                  {childNode}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const getFilteredBranchPersons = (): any[] => {
+    const branchRootId = selectedBranchId || rootPersonId;
+    if (!branchRootId) return [];
+
+    const branchRoot = persons.find(p => p.id === branchRootId);
+    if (!branchRoot) return [];
+
+    const result: any[] = [];
+    const visited = new Set<string>();
+
+    const traverse = (pId: string, currentGen = 1) => {
+      if (visited.has(pId)) return;
+      visited.add(pId);
+
+      const p = persons.find(x => x.id === pId);
+      if (!p) return;
+
+      if (currentGen >= minGen && currentGen <= maxGen) {
+        if (!(excludeLiving && p.isLiving)) {
+          result.push({ person: p, generation: currentGen });
+        }
+      }
+
+      const children = getChildren(pId);
+      for (const child of children) {
+        traverse(child.id, currentGen + 1);
+      }
+    };
+
+    traverse(branchRootId, 1);
+    return result;
+  };
+
+  const renderVerticalRegistry = () => {
+    const branchPersons = getFilteredBranchPersons();
+    if (branchPersons.length === 0) {
+      return <div className="text-slate-400 p-12 text-center">暂无符合筛选条件的宗亲记录。</div>;
+    }
+
+    return (
+      <div className="flex flex-row-reverse overflow-x-auto gap-4 p-8 bg-[#fdfaf2] border border-amber-200/40 rounded-lg min-h-[500px] font-serif shadow-inner select-none print:bg-white print:border-none print:shadow-none">
+        {branchPersons.map(({ person, generation }) => {
+          const { father, mother } = getParents(person.id);
+          const spouses = getSpouses(person.id);
+          const children = getChildren(person.id);
+
+          return (
+            <div key={person.id} className="flex-none w-32 border-x border-red-700/30 px-3 flex flex-col justify-between min-h-[400px] relative bg-[#fdfbf6] py-4 print:border-red-600/50" style={{ writingMode: "vertical-rl" }}>
+              {/* Top: Gen and Name */}
+              <div className="space-y-4">
+                <div className="flex items-center gap-1.5 border-b border-red-100 pb-2 mb-2 w-full">
+                  <span className="text-[10px] bg-red-100 text-red-800 px-1 py-0.5 rounded font-sans font-bold" style={{ writingMode: "horizontal-tb" }}>
+                    第 {generation} 世
+                  </span>
+                  {person.avatarUrl && (
+                    <img src={person.avatarUrl} alt="" className="w-8 h-8 rounded-full border border-red-300 object-cover mt-2" style={{ writingMode: "horizontal-tb" }} />
+                  )}
+                </div>
+                
+                <div className="text-lg font-bold text-red-900 tracking-wider">
+                  {person.surname}{person.givenName}
+                </div>
+
+                {/* Courtesy / posthumous name details */}
+                <div className="text-[11px] text-slate-600 space-y-1 mt-2">
+                  {person.courtesyName && <div>字{person.courtesyName}</div>}
+                  {person.artName && <div>号{person.artName}</div>}
+                  {person.posthumousName && <div>谥{person.posthumousName}</div>}
+                  {person.rankInSiblings && <div>排行：{person.rankInSiblings}</div>}
+                </div>
+
+                {/* Relational parents */}
+                <div className="text-xs text-slate-700 font-medium space-y-1 mt-4">
+                  {father && <div>父系：{father.surname}{father.givenName}</div>}
+                  {mother && <div>母系：{mother.surname}{mother.givenName}</div>}
+                  {spouses.length > 0 && (
+                    <div>
+                      娶妻：
+                      {spouses.map((s: any) => `${s.surname || ""}${s.givenName || "氏"}`).join("、")}
+                    </div>
+                  )}
+                </div>
+
+                {/* Life history details */}
+                <div className="text-[11px] text-slate-800 leading-loose mt-4 border-t border-red-50/50 pt-2 h-44 overflow-y-auto pr-1">
+                  {person.biography || "生卒考证不详。"}
+                  {children.length > 0 && (
+                    <div className="mt-3 text-red-800/80">
+                      生子：
+                      {children.map((c: any) => `${c.surname}${c.givenName}`).join("、")}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Bottom footer index */}
+              <div className="text-[9px] text-slate-400 font-mono self-start border-t border-slate-100 w-full pt-1">
+                ID: {person.id.substring(0, 8)}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    );
   };
 
   return (
@@ -673,48 +894,129 @@ export default function ProjectDetails({ params }: { params: Promise<{ id: strin
       {/* 2. FAMILY TREE VIEW TAB */}
       {activeTab === "tree" && (
         <div className="space-y-6">
-          <div className="bg-white border border-slate-200 rounded-lg shadow-sm p-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div>
-              <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">{t("rootPerson")}</label>
-              <select
-                value={rootPersonId}
-                onChange={(e) => setRootPersonId(e.target.value)}
-                className="border border-slate-300 rounded-md p-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-slate-800 text-sm font-medium"
-              >
-                {persons.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.surname ? `${p.surname} ` : ""}{p.givenName || "Unnamed"}
-                  </option>
-                ))}
-              </select>
+          <div className="bg-white border border-slate-200 rounded-lg shadow-sm p-6 space-y-6 print:hidden">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div>
+                <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">{t("rootPerson")}</label>
+                <select
+                  value={rootPersonId}
+                  onChange={(e) => setRootPersonId(e.target.value)}
+                  className="border border-slate-300 rounded-md p-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-slate-800 text-sm font-medium"
+                >
+                  {persons.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.surname ? `${p.surname} ` : ""}{p.givenName || "Unnamed"}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="flex flex-wrap rounded-md shadow-sm border border-slate-200 p-1 bg-slate-50 gap-1 md:gap-0">
+                <button
+                  onClick={() => setTreeSubTab("descendant")}
+                  className={`py-1.5 px-3 rounded text-xs font-medium transition-all ${
+                    treeSubTab === "descendant" ? "bg-white text-blue-600 shadow-sm" : "text-slate-500 hover:text-slate-700"
+                  }`}
+                >
+                  {t("descendantTree")}
+                </button>
+                <button
+                  onClick={() => setTreeSubTab("ancestry")}
+                  className={`py-1.5 px-3 rounded text-xs font-medium transition-all ${
+                    treeSubTab === "ancestry" ? "bg-white text-blue-600 shadow-sm" : "text-slate-500 hover:text-slate-700"
+                  }`}
+                >
+                  {t("ancestryTree")}
+                </button>
+                <button
+                  onClick={() => setTreeSubTab("table")}
+                  className={`py-1.5 px-3 rounded text-xs font-medium transition-all ${
+                    treeSubTab === "table" ? "bg-white text-blue-600 shadow-sm" : "text-slate-500 hover:text-slate-700"
+                  }`}
+                >
+                  {t("lineageTable")}
+                </button>
+                <button
+                  onClick={() => setTreeSubTab("verticalTree")}
+                  className={`py-1.5 px-3 rounded text-xs font-medium transition-all ${
+                    treeSubTab === "verticalTree" ? "bg-white text-red-600 shadow-sm font-bold" : "text-slate-500 hover:text-slate-700"
+                  }`}
+                >
+                  🏮 {t("verticalTree")}
+                </button>
+                <button
+                  onClick={() => setTreeSubTab("verticalRegistry")}
+                  className={`py-1.5 px-3 rounded text-xs font-medium transition-all ${
+                    treeSubTab === "verticalRegistry" ? "bg-white text-red-600 shadow-sm font-bold" : "text-slate-500 hover:text-slate-700"
+                  }`}
+                >
+                  📜 {t("verticalRegistry")}
+                </button>
+              </div>
             </div>
 
-            <div className="flex rounded-md shadow-sm border border-slate-200 p-1 bg-slate-50">
-              <button
-                onClick={() => setTreeSubTab("descendant")}
-                className={`py-1.5 px-3 rounded text-xs font-medium transition-all ${
-                  treeSubTab === "descendant" ? "bg-white text-blue-600 shadow-sm" : "text-slate-500 hover:text-slate-700"
-                }`}
-              >
-                {t("descendantTree")}
-              </button>
-              <button
-                onClick={() => setTreeSubTab("ancestry")}
-                className={`py-1.5 px-3 rounded text-xs font-medium transition-all ${
-                  treeSubTab === "ancestry" ? "bg-white text-blue-600 shadow-sm" : "text-slate-500 hover:text-slate-700"
-                }`}
-              >
-                {t("ancestryTree")}
-              </button>
-              <button
-                onClick={() => setTreeSubTab("table")}
-                className={`py-1.5 px-3 rounded text-xs font-medium transition-all ${
-                  treeSubTab === "table" ? "bg-white text-blue-600 shadow-sm" : "text-slate-500 hover:text-slate-700"
-                }`}
-              >
-                {t("lineageTable")}
-              </button>
-            </div>
+            {/* Customization Settings panel for V1.5 Vertical Layouts */}
+            {(treeSubTab === "verticalTree" || treeSubTab === "verticalRegistry") && (
+              <div className="border-t border-slate-100 pt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 bg-slate-50/50 p-4 rounded-lg border border-slate-200/60 animate-fadeIn">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-500 mb-1">{t("filterBranchFounder")} (Branch Root)</label>
+                  <select
+                    value={selectedBranchId || rootPersonId}
+                    onChange={(e) => setSelectedBranchId(e.target.value)}
+                    className="w-full border border-slate-300 rounded p-1.5 text-xs bg-white text-slate-800 font-medium"
+                  >
+                    {persons.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.surname ? `${p.surname} ` : ""}{p.givenName || "Unnamed"} (Gen {p.generationNumber || "1"})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-500 mb-1">{t("generationStart")} (Min Gen)</label>
+                  <input
+                    type="number"
+                    min={1}
+                    max={maxGen}
+                    value={minGen}
+                    onChange={(e) => setMinGen(Number(e.target.value))}
+                    className="w-full border border-slate-300 rounded p-1.5 text-xs bg-white text-slate-800"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-500 mb-1">{t("generationEnd")} (Max Gen)</label>
+                  <input
+                    type="number"
+                    min={minGen}
+                    max={50}
+                    value={maxGen}
+                    onChange={(e) => setMaxGen(Number(e.target.value))}
+                    className="w-full border border-slate-300 rounded p-1.5 text-xs bg-white text-slate-800"
+                  />
+                </div>
+
+                <div className="flex flex-col justify-end space-y-2">
+                  <label className="flex items-center space-x-2 text-xs font-semibold text-slate-600 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={excludeLiving}
+                      onChange={(e) => setExcludeLiving(e.target.checked)}
+                      className="rounded border-slate-300 text-red-600 focus:ring-red-500"
+                    />
+                    <span>🛡️ {t("excludeLiving")}</span>
+                  </label>
+                  
+                  <button
+                    onClick={() => window.print()}
+                    className="w-full bg-red-700 hover:bg-red-800 text-white font-semibold text-xs py-1.5 px-3 rounded shadow transition-colors flex items-center justify-center gap-1.5"
+                  >
+                    🖨️ {t("printLayout")}
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="bg-white border border-slate-200 rounded-lg shadow-sm p-6 min-h-[400px]">
@@ -786,6 +1088,78 @@ export default function ProjectDetails({ params }: { params: Promise<{ id: strin
                           )}
                         </tbody>
                       </table>
+                    </div>
+                  </div>
+                )}
+
+                {treeSubTab === "verticalTree" && (
+                  <div className="space-y-4 animate-fadeIn">
+                    <style dangerouslySetInnerHTML={{__html: `
+                      @media print {
+                        body * {
+                          visibility: hidden;
+                        }
+                        #print-pedigree-container, #print-pedigree-container * {
+                          visibility: visible;
+                        }
+                        #print-pedigree-container {
+                          position: absolute;
+                          left: 0;
+                          top: 0;
+                          width: 100% !important;
+                          background: white !important;
+                          color: black !important;
+                          border: none !important;
+                          padding: 0 !important;
+                          margin: 0 !important;
+                        }
+                        @page {
+                          size: landscape;
+                          margin: 1cm;
+                        }
+                      }
+                    `}} />
+                    <h4 className="text-sm font-semibold text-red-800 uppercase tracking-wider mb-2 print:hidden">🏮 苏式行序世系图 (Su-Style Vertical Pedigree Chart)</h4>
+                    <div id="print-pedigree-container" className="p-6 border border-red-200/50 rounded-lg bg-[#faf6ee] overflow-x-auto flex flex-row-reverse justify-center min-h-[450px]">
+                      {persons.find((p) => p.id === (selectedBranchId || rootPersonId)) ? (
+                        renderVerticalTreeNode(persons.find((p) => p.id === (selectedBranchId || rootPersonId)))
+                      ) : (
+                        <div className="text-slate-400 italic">Select a Branch Founder or Root Person.</div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {treeSubTab === "verticalRegistry" && (
+                  <div className="space-y-4 animate-fadeIn">
+                    <style dangerouslySetInnerHTML={{__html: `
+                      @media print {
+                        body * {
+                          visibility: hidden;
+                        }
+                        #print-pedigree-container, #print-pedigree-container * {
+                          visibility: visible;
+                        }
+                        #print-pedigree-container {
+                          position: absolute;
+                          left: 0;
+                          top: 0;
+                          width: 100% !important;
+                          background: white !important;
+                          color: black !important;
+                          border: none !important;
+                          padding: 0 !important;
+                          margin: 0 !important;
+                        }
+                        @page {
+                          size: landscape;
+                          margin: 1cm;
+                        }
+                      }
+                    `}} />
+                    <h4 className="text-sm font-semibold text-red-800 uppercase tracking-wider mb-2 print:hidden">📜 欧式房志世系记 (Ou-Style Vertical Pedigree Text Registry)</h4>
+                    <div className="p-0 border border-red-200/50 rounded-lg overflow-hidden">
+                      {renderVerticalRegistry()}
                     </div>
                   </div>
                 )}

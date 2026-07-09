@@ -220,6 +220,7 @@ async function main() {
     biography: '字厚甫，清咸丰举人，曾任江宁府学训导。',
     ancestralPlaceId: placeNanjing.id,
     patrilinealDna: 'O-M122',
+    avatarUrl: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='46' fill='%23fefaf2' stroke='%23b91c1c' stroke-width='4'/><text x='50' y='62' font-size='38' font-family='SimSun, serif' font-weight='bold' text-anchor='middle' fill='%23b91c1c'>守仁</text></svg>",
   });
 
   await addZhang('shouyi', {
@@ -229,6 +230,7 @@ async function main() {
     biography: '同治年间迁居苏州，经营绸缎庄。',
     ancestralPlaceId: placeNanjing.id,
     patrilinealDna: 'O-M122',
+    avatarUrl: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='46' fill='%23fefaf2' stroke='%23b91c1c' stroke-width='4'/><text x='50' y='62' font-size='38' font-family='SimSun, serif' font-weight='bold' text-anchor='middle' fill='%23b91c1c'>守义</text></svg>",
   });
 
   await addZhang('shouli', {
@@ -238,6 +240,7 @@ async function main() {
     biography: '盛宣怀幕僚，参与创办南洋公学。',
     ancestralPlaceId: placeNanjing.id,
     patrilinealDna: 'O-M122',
+    avatarUrl: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='46' fill='%23fefaf2' stroke='%23b91c1c' stroke-width='4'/><text x='50' y='62' font-size='38' font-family='SimSun, serif' font-weight='bold' text-anchor='middle' fill='%23b91c1c'>守礼</text></svg>",
   });
 
   await addZhang('wang_wife', {

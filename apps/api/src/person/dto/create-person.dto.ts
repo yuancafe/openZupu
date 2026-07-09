@@ -1,4 +1,4 @@
-import { IsString, IsOptional, IsBoolean, MaxLength, Matches } from 'class-validator';
+import { IsString, IsOptional, IsBoolean, MaxLength, Matches, IsNumber } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class CreatePersonDto {
@@ -59,4 +59,99 @@ export class CreatePersonDto {
   @IsOptional()
   @IsString()
   dnaMarkers?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  biography?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  notes?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  originalSurname?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  adoptedSurname?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  genealogicalName?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  courtesyName?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  artName?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  tabooName?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  posthumousName?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  childhoodName?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  generationCharacter?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsNumber()
+  generationNumber?: number;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  rankInSiblings?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  nativePlaceId?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  ancestralPlaceId?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  residencePlaceId?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  federatedId?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  externalLink?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  avatarUrl?: string;
 }

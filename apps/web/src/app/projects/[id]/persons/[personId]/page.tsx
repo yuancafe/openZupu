@@ -31,6 +31,7 @@ export default function PersonDetails({ params }: { params: Promise<{ id: string
   const [isLiving, setIsLiving] = useState(true);
   const [biography, setBiography] = useState("");
   const [notes, setNotes] = useState("");
+  const [avatarUrl, setAvatarUrl] = useState("");
 
   const [courtesyName, setCourtesyName] = useState("");
   const [artName, setArtName] = useState("");
@@ -99,6 +100,7 @@ export default function PersonDetails({ params }: { params: Promise<{ id: string
         setIsLiving(data.isLiving);
         setBiography(data.biography || "");
         setNotes(data.notes || "");
+        setAvatarUrl(data.avatarUrl || "");
 
         setCourtesyName(data.courtesyName || "");
         setArtName(data.artName || "");
@@ -177,6 +179,7 @@ export default function PersonDetails({ params }: { params: Promise<{ id: string
           nativePlaceId: nativePlaceId || null,
           ancestralPlaceId: ancestralPlaceId || null,
           residencePlaceId: residencePlaceId || null,
+          avatarUrl: avatarUrl || null,
         }),
       });
       fetchPersonData();
@@ -413,9 +416,65 @@ export default function PersonDetails({ params }: { params: Promise<{ id: string
         <div className="space-y-6 lg:col-span-1">
           {/* Main Visual Box */}
           <div className="bg-white p-6 rounded-lg border border-slate-200 shadow-sm text-center space-y-4">
-            <div className="w-20 h-20 bg-blue-100 text-blue-700 rounded-full flex items-center justify-center text-3xl font-bold mx-auto shadow-inner">
-              {person.surname ? person.surname[0] : (person.givenName ? person.givenName[0] : "👤")}
+            <div className="w-24 h-24 rounded-full overflow-hidden mx-auto shadow-md border-2 border-white ring-2 ring-blue-100 flex items-center justify-center bg-slate-50 relative group">
+              {person.avatarUrl ? (
+                <img src={person.avatarUrl} alt={person.givenName || "Avatar"} className="w-full h-full object-cover" />
+              ) : (
+                <span className="text-4xl text-blue-700 font-bold">
+                  {person.surname ? person.surname[0] : (person.givenName ? person.givenName[0] : "👤")}
+                </span>
+              )}
             </div>
+            
+            <div className="flex flex-col items-center">
+              <label className="cursor-pointer bg-slate-50 hover:bg-slate-100 text-slate-600 border border-slate-200 rounded-md px-3 py-1 text-xs font-semibold shadow-sm transition-all flex items-center gap-1.5">
+                📷 {t("uploadAvatarBtn")}
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    const reader = new FileReader();
+                    reader.onloadend = async () => {
+                      const base64 = reader.result as string;
+                      setAvatarUrl(base64);
+                      try {
+                        await apiFetch(`/persons/${unwrappedParams.personId}`, {
+                          method: "PATCH",
+                          body: JSON.stringify({ avatarUrl: base64 }),
+                        });
+                        fetchPersonData();
+                      } catch (err) {
+                        console.error(err);
+                      }
+                    };
+                    reader.readAsDataURL(file);
+                  }}
+                />
+              </label>
+              {avatarUrl && (
+                <button
+                  onClick={async () => {
+                    setAvatarUrl("");
+                    try {
+                      await apiFetch(`/persons/${unwrappedParams.personId}`, {
+                        method: "PATCH",
+                        body: JSON.stringify({ avatarUrl: null }),
+                      });
+                      fetchPersonData();
+                    } catch (err) {
+                      console.error(err);
+                    }
+                  }}
+                  className="text-[10px] text-rose-500 hover:text-rose-700 font-bold mt-1.5"
+                >
+                  {t("delete")}
+                </button>
+              )}
+            </div>
+
             <div>
               <h2 className="text-2xl font-bold text-slate-900">
                 {person.surname ? `${person.surname} ` : ""}{person.givenName || "Unnamed"}
@@ -558,7 +617,7 @@ export default function PersonDetails({ params }: { params: Promise<{ id: string
                 { id: "names", label: t("lineageNamesTitle") },
                 { id: "generation", label: t("generationRankTitle") },
                 { id: "places", label: t("historicalPlacesTitle") },
-                { id: "career", label: "仕途/经历 & 社会关系" },
+                { id: "career", label: t("tabCareerSocial") },
                 { id: "custom", label: t("tabCustom") }
               ].map((subTab) => (
                 <button
@@ -615,7 +674,7 @@ export default function PersonDetails({ params }: { params: Promise<{ id: string
                       </select>
                     </div>
                     <div>
-                      <label className="block text-xs font-semibold text-slate-500 mb-1">Birth Date</label>
+                      <label className="block text-xs font-semibold text-slate-500 mb-1">{t("birthDate")} (Birth Date)</label>
                       <input
                         type="text"
                         value={birthDate}
@@ -625,7 +684,7 @@ export default function PersonDetails({ params }: { params: Promise<{ id: string
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-semibold text-slate-500 mb-1">Death Date</label>
+                      <label className="block text-xs font-semibold text-slate-500 mb-1">{t("deathDate")} (Death Date)</label>
                       <input
                         type="text"
                         value={deathDate}
