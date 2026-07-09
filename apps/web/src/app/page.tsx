@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { apiFetch, setAuthSession } from "@/lib/api";
+import { apiFetch, clearAuthSession, setAuthSession } from "@/lib/api";
 
 export default function Home() {
   const [projects, setProjects] = useState<any[]>([]);
@@ -27,7 +27,8 @@ export default function Home() {
     setError("");
     try {
       let res = await apiFetch("/projects", { skipAuthRedirect: true });
-      if (res.status === 401) {
+      if (!res.ok) {
+        clearAuthSession();
         await loginAsDemoGuest();
         res = await apiFetch("/projects", { skipAuthRedirect: true });
       }
