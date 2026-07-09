@@ -4,6 +4,10 @@
 - [x] Added `patrilinealDna` (Y-DNA) and `matrilinealDna` (mtDNA) fields to the database schema.
 - [x] Overhauled genetic matching to use a biologically accurate locus-allele parsing and overlap matching algorithm.
 - [x] Added input length and whitelisted regular expression constraints to birthDate and deathDate inputs.
+- [x] Implemented global i18n switching context and persistent selection.
+- [x] Created detailed, modular edit panels for 20+ specific genealogy and place fields.
+- [x] Integrated Data Tools (GEDCOM import/export, GraphML network export, JSON/CSV).
+- [x] Implemented admin system user dashboard interface.
 - [x] Verified build compilation success on all modules.
 
 ## Version 1.2 (Completed) - Decentralized Federated Cross-check Network

@@ -10,6 +10,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **DNA Haplogroups Support**: Added Y-DNA (patrilineal) and mtDNA (matrilineal) haplogroup recording fields to the Person schema.
 - **STR Locus-Allele Matching**: Designed and implemented locus-allele parsed matching for Short Tandem Repeat (STR) genetic markers to support multi-allele DNA matching (e.g. `DYS393=13,14`), replacing simple set intersections with high-accuracy biological overlap calculation.
 - **Structured Date Validation**: Restrained historical date strings with strict length checks (max 50) and white-list character regular expressions to secure flexible historical entries (e.g., `Circa 1850`) against SQL and Script injections.
+- **Bilingual Interface (i18n)**: Implemented global Chinese/English language switcher backed by a central translation context layer, persisting selections in localStorage.
+- **20+ Detailed Edit Fields**: Exposed edit controls for courtesy name, art name, taboo name, posthumous name, childhood name, genealogical name, original/adopted surnames, generation info, rank in siblings, occupations, status logs, custom fields, and physical geocoding place coordinates.
+- **Data Tools Console**: Integrated GEDCOM upload/download, GraphML relationship network export, and JSON/CSV backup controls in the project interface.
+- **System settings & User Admin Dashboard**: Activated administration panel enabling ADMIN users to create, search, adjust roles (ADMIN/USER), or delete platform users.
 
 ## [1.2.0] - 2026-07-04
 ### Added

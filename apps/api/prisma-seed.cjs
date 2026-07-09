@@ -1,7 +1,7 @@
 /* eslint-disable */
-// Demo seed script — 张氏族谱 (Zhang Family Genealogy)
-// Run via: node prisma-seed.cjs  (called from apps/api/Dockerfile on first deploy)
-// Idempotent: skips if demo project already exists.
+// Rich multi-project demo seed script
+// Run via: node prisma-seed.cjs
+// Cleans existing demo data and seeds projects: Zhang Clan, Li Clan, and Chen Clan with cross-project associations, DNA matches, and classmates.
 
 let PrismaClient;
 try {
@@ -15,20 +15,42 @@ try {
 
 const prisma = new PrismaClient();
 
-const DEMO_PROJECT_NAME = '张氏大成宗谱 · 江南支派';
+const demoProjectNames = [
+  '张氏大成宗谱 · 江南支派',
+  '李氏家乘 · 吴郡支派',
+  '陈氏宗谱 · 渤海支派'
+];
 
 async function main() {
-  // 1. Skip if seed already ran
-  const existing = await prisma.project.findFirst({
-    where: { name: DEMO_PROJECT_NAME },
+  console.log('[seed] Cleaning up existing demo projects and users...');
+  
+  // Clean projects
+  const existingProjects = await prisma.project.findMany({
+    where: { name: { in: demoProjectNames } }
   });
-  if (existing) {
-    console.log('[seed] Demo project already exists, skipping.');
-    return;
+  
+  for (const proj of existingProjects) {
+    const projectPersons = await prisma.person.findMany({ where: { projectId: proj.id } });
+    const personIds = projectPersons.map(p => p.id);
+    
+    await prisma.kinshipRelation.deleteMany({ where: { projectId: proj.id } });
+    await prisma.officeOccupation.deleteMany({ where: { projectId: proj.id } });
+    await prisma.statusRecord.deleteMany({ where: { projectId: proj.id } });
+    await prisma.socialAssociation.deleteMany({ where: { projectId: proj.id } });
+    await prisma.customField.deleteMany({ where: { entityId: { in: personIds } } });
+    await prisma.person.deleteMany({ where: { projectId: proj.id } });
+    await prisma.projectMember.deleteMany({ where: { projectId: proj.id } });
+    await prisma.generation.deleteMany({ where: { projectId: proj.id } });
+    await prisma.branch.deleteMany({ where: { projectId: proj.id } });
+    await prisma.source.deleteMany({ where: { projectId: proj.id } });
+    await prisma.project.delete({ where: { id: proj.id } });
   }
-  console.log('[seed] Seeding 张氏族谱 demo data...');
 
-  // 2. Create admin user
+  // Clean users
+  const usernames = ['admin', 'zhang_curator', 'guest'];
+  await prisma.user.deleteMany({ where: { username: { in: usernames } } });
+
+  console.log('[seed] Seeding rich demo user database...');
   const bcrypt = require('bcrypt');
   const adminPassword = await bcrypt.hash('admin123', 12);
   const admin = await prisma.user.create({
@@ -40,9 +62,8 @@ async function main() {
     },
   });
 
-  // 3. Create 2 editor users
   const editorPassword = await bcrypt.hash('editor123', 12);
-  const editor1 = await prisma.user.create({
+  const zhangCurator = await prisma.user.create({
     data: {
       username: 'zhang_curator',
       email: 'curator@zhang.demo',
@@ -50,7 +71,8 @@ async function main() {
       role: 'USER',
     },
   });
-  const editor2 = await prisma.user.create({
+
+  const guestUser = await prisma.user.create({
     data: {
       username: 'guest',
       email: 'guest@openzupu.demo',
@@ -59,347 +81,433 @@ async function main() {
     },
   });
 
-  // 4. Create demo project
-  const project = await prisma.project.create({
-    data: {
-      name: DEMO_PROJECT_NAME,
-      description: '演示数据：江南张氏三兄弟及其子孙，跨越 4 代约 15 人的典型族谱网络。\n\n**登录账号**：\n- admin / admin123（系统管理员）\n- zhang_curator / editor123（宗亲会管理员）\n- guest / editor123（只读访客）',
-      projectType: 'CLAN',
-      defaultPrivacy: 'Private',
-      ownerId: editor1.id,
-    },
-  });
-
-  // Add admin and editor2 as members
-  await prisma.projectMember.createMany({
-    data: [
-      { projectId: project.id, userId: editor1.id, role: 'OWNER' },
-      { projectId: project.id, userId: admin.id, role: 'ADMIN' },
-      { projectId: project.id, userId: editor2.id, role: 'VIEWER' },
-    ],
-  });
-
-  // 5. Create demo source (fictional 族谱)
-  const source = await prisma.source.create({
-    data: {
-      projectId: project.id,
-      sourceType: 'GENEALOGY_BOOK',
-      title: '《张氏大成宗谱·江南支派》光绪二十年（1894）木活字本',
-      author: '张德裕',
-      compiler: '张德裕',
-      year: '1894',
-      dynasty: '清',
-      volume: '卷三·江南总图',
-      page: '1-24',
-      citation: '上海图书馆藏，编号 G1123-22',
-      reliability: 'High',
-    },
-  });
-
-  // 6. Create places
+  // --- SEED PLACES ---
   const placeNanjing = await prisma.place.create({
-    data: {
-      name: '南京',
-      fullName: '江苏省江宁府上元县',
-      placeType: 'CITY',
-      historicalName: '应天府',
-      currentName: '南京',
-    },
+    data: { name: '南京', fullName: '江苏省江宁府上元县', placeType: 'CITY', historicalName: '江宁/应天府', currentName: '南京' }
   });
   const placeSuzhou = await prisma.place.create({
-    data: {
-      name: '苏州',
-      fullName: '江苏省苏州府吴县',
-      placeType: 'CITY',
-    },
+    data: { name: '苏州', fullName: '江苏省苏州府吴县', placeType: 'CITY', historicalName: '平江府', currentName: '苏州' }
   });
   const placeShanghai = await prisma.place.create({
-    data: {
-      name: '上海',
-      fullName: '上海县',
-      placeType: 'CITY',
-    },
+    data: { name: '上海', fullName: '江苏省松江府上海县', placeType: 'CITY', historicalName: '华亭县', currentName: '上海' }
   });
 
-  // 7. Create 张氏三兄弟 (Gen 1) + spouses
-  // Person 1: 张守仁 (Zhang Shouren) — 长兄
-  // Person 2: 王氏 (Wang Shi) — 长兄之妻
-  // Person 3: 张守义 (Zhang Shouyi) — 次兄
-  // Person 4: 李氏 (Li Shi) — 次兄之妻
-  // Person 5: 张守礼 (Zhang Shouli) — 三弟
-  // Person 6: 陈氏 (Chen Shi) — 三弟之妻
+  // ==========================================
+  // PROJECT 1: 张氏大成宗谱 (Zhang Clan)
+  // ==========================================
+  const projectZhang = await prisma.project.create({
+    data: {
+      name: '张氏大成宗谱 · 江南支派',
+      description: '演示数据一：江南张氏支系谱牒，包含 12 人、4 代成员。本谱有女性成员【张致雅】联姻嫁入李氏宗谱，并且有成员【张致新】与陈氏宗谱【陈怀祖】具备高度匹配的 Y-DNA 指纹并曾为同窗好友。',
+      projectType: 'CLAN',
+      defaultPrivacy: 'Private',
+      ownerId: zhangCurator.id,
+    }
+  });
 
-  const persons = {};
-  async function addPerson(key, data) {
-    persons[key] = await prisma.person.create({
-      data: { projectId: project.id, ...data },
+  await prisma.projectMember.createMany({
+    data: [
+      { projectId: projectZhang.id, userId: zhangCurator.id, role: 'OWNER' },
+      { projectId: projectZhang.id, userId: admin.id, role: 'ADMIN' },
+      { projectId: projectZhang.id, userId: guestUser.id, role: 'VIEWER' }
+    ]
+  });
+
+  const sourceZhang = await prisma.source.create({
+    data: {
+      projectId: projectZhang.id,
+      sourceType: 'GENEALOGY_BOOK',
+      title: '《张氏大成宗谱》光绪修本',
+      author: '张德裕',
+      reliability: 'High',
+    }
+  });
+
+  // ==========================================
+  // PROJECT 2: 李氏家乘 (Li Clan)
+  // ==========================================
+  const projectLi = await prisma.project.create({
+    data: {
+      name: '李氏家乘 · 吴郡支派',
+      description: '演示数据二：吴门李氏商贾望族，包含 5 人、3 代成员。本谱通过跨族谱联姻关系与张氏宗谱【张致雅】互通，并育有后代【李怀】。',
+      projectType: 'CLAN',
+      defaultPrivacy: 'Private',
+      ownerId: zhangCurator.id,
+    }
+  });
+
+  await prisma.projectMember.createMany({
+    data: [
+      { projectId: projectLi.id, userId: zhangCurator.id, role: 'OWNER' },
+      { projectId: projectLi.id, userId: admin.id, role: 'ADMIN' },
+      { projectId: projectLi.id, userId: guestUser.id, role: 'VIEWER' }
+    ]
+  });
+
+  // ==========================================
+  // PROJECT 3: 陈氏宗谱 (Chen Clan)
+  // ==========================================
+  const projectChen = await prisma.project.create({
+    data: {
+      name: '陈氏宗谱 · 渤海支派',
+      description: '演示数据三：海派陈氏书香世家，主要记载近代学者成员。其中【陈怀祖】在 1905 年就读于上海南洋公学，与张氏宗谱的【张致新】是同届同学，且通过 Y-DNA 测试发现二人存在近 2000 年内的同宗父系关联。',
+      projectType: 'CLAN',
+      defaultPrivacy: 'Private',
+      ownerId: zhangCurator.id,
+    }
+  });
+
+  await prisma.projectMember.createMany({
+    data: [
+      { projectId: projectChen.id, userId: zhangCurator.id, role: 'OWNER' },
+      { projectId: projectChen.id, userId: admin.id, role: 'ADMIN' },
+      { projectId: projectChen.id, userId: guestUser.id, role: 'VIEWER' }
+    ]
+  });
+
+
+  // --- CREATE PEOPLE FOR ZHANG CLAN (P1) ---
+  const zhang = {};
+  async function addZhang(key, data) {
+    zhang[key] = await prisma.person.create({
+      data: { projectId: projectZhang.id, ...data }
     });
   }
 
-  // Gen 1 — 三兄弟 + 配偶
-  await addPerson('shouren', {
+  await addZhang('shouren', {
     surname: '张', givenName: '守仁', sex: 'Male',
     birthDate: '1845-03-12', deathDate: '1912-08-30',
     isLiving: false, generationCharacter: '守', generationNumber: 12,
-    privacyLevel: 'Public',
-    biography: '字厚甫，张氏江南支派第十二世长兄。清咸丰年间中举人，曾任江宁府学训导。生平热心族务，主修本支族谱。',
+    courtesyName: '厚甫', artName: '退思', tabooName: '守仁', posthumousName: '文懿',
+    biography: '字厚甫，张氏江南支派第十二世长兄。咸丰年间中举人，曾任江宁府学训导。',
     ancestralPlaceId: placeNanjing.id,
     patrilinealDna: 'O-M122',
   });
-  await addPerson('shouyi', {
+
+  await addZhang('shouyi', {
     surname: '张', givenName: '守义', sex: 'Male',
     birthDate: '1848-07-05', deathDate: '1915-02-14',
     isLiving: false, generationCharacter: '守', generationNumber: 12,
-    privacyLevel: 'Public',
-    biography: '字仲方，守仁二弟。经营丝绸生意，于苏州设绸缎庄。同治年间迁居苏州。',
+    courtesyName: '仲方',
+    biography: '守仁二弟。同治年间迁居苏州，经营丝绸生意。',
     ancestralPlaceId: placeNanjing.id,
     patrilinealDna: 'O-M122',
   });
-  await addPerson('shouli', {
+
+  await addZhang('shouli', {
     surname: '张', givenName: '守礼', sex: 'Male',
     birthDate: '1851-11-20', deathDate: '1920-05-08',
     isLiving: false, generationCharacter: '守', generationNumber: 12,
-    privacyLevel: 'Public',
-    biography: '字季和，守仁三弟。早年赴上海求学，后入盛宣怀幕府，参与创办南洋公学。',
+    courtesyName: '季和',
+    biography: '守仁三弟。赴上海求学，入盛宣怀幕府，参与创办南洋公学。',
     ancestralPlaceId: placeNanjing.id,
     patrilinealDna: 'O-M122',
   });
 
-  // 配偶（嫁入）
-  await addPerson('wang_wife', {
+  await addZhang('wang_wife', {
     surname: '王', givenName: '氏', sex: 'Female',
     birthDate: '1849-02-18', deathDate: '1918-04-22',
     isLiving: false, generationNumber: 12,
-    matrilinealDna: 'D4',
-    privacyLevel: 'Public',
-    biography: '王氏，南京王氏之女，守仁原配。',
-    ancestralPlaceId: placeNanjing.id,
-  });
-  await addPerson('li_wife', {
-    surname: '李', givenName: '氏', sex: 'Female',
-    birthDate: '1852-09-30', deathDate: '1919-12-03',
-    isLiving: false, generationNumber: 12,
-    matrilinealDna: 'M7',
-    privacyLevel: 'Public',
-    biography: '李氏，苏州李氏之女，守义原配。',
-    ancestralPlaceId: placeSuzhou.id,
-  });
-  await addPerson('chen_wife', {
-    surname: '陈', givenName: '氏', sex: 'Female',
-    birthDate: '1854-06-14', deathDate: '1923-08-19',
-    isLiving: false, generationNumber: 12,
-    matrilinealDna: 'D4',
-    privacyLevel: 'Public',
-    biography: '陈氏，上海陈氏之女，守礼原配。',
-    ancestralPlaceId: placeShanghai.id,
+    biography: '南京王氏之女，守仁原配。',
   });
 
-  // Gen 2 — 长兄子女 (Gen 13)
-  await addPerson('zhiyuan', {
+  await addZhang('zhiyuan', {
     surname: '张', givenName: '致远', sex: 'Male',
     birthDate: '1872-05-08', deathDate: '1945-03-15',
     isLiving: false, generationCharacter: '致', generationNumber: 13,
-    privacyLevel: 'Public',
-    biography: '守仁长子，字子通，留学日本法政大学。民国时曾任上海特别市议员。',
+    courtesyName: '子通',
+    biography: '守仁长子，留学日本法政大学。民国时曾任上海特别市议员。',
     ancestralPlaceId: placeNanjing.id,
     patrilinealDna: 'O-M122',
   });
-  await addPerson('zhiya', {
+
+  await addZhang('zhiya', {
     surname: '张', givenName: '致雅', sex: 'Female',
     birthDate: '1875-10-22', deathDate: '1948-07-11',
     isLiving: false, generationCharacter: '致', generationNumber: 13,
-    privacyLevel: 'Public',
-    matrilinealDna: 'D4',
+    biography: '守仁长女。光绪二十五年（1899）与苏州李氏家族【李万年】联姻，嫁入吴门李氏。',
     ancestralPlaceId: placeNanjing.id,
   });
 
-  // 次兄子女 (Gen 13)
-  await addPerson('zhiqiang', {
-    surname: '张', givenName: '致强', sex: 'Male',
-    birthDate: '1876-12-01', deathDate: '1952-09-04',
-    isLiving: false, generationCharacter: '致', generationNumber: 13,
-    privacyLevel: 'Public',
-    biography: '守义长子，子承父业经营苏州绸缎庄。',
-    ancestralPlaceId: placeSuzhou.id,
-    patrilinealDna: 'O-M122',
-  });
-
-  // 三弟子女 (Gen 13)
-  await addPerson('zhixin', {
+  await addZhang('zhixin', {
     surname: '张', givenName: '致新', sex: 'Male',
     birthDate: '1878-04-19', deathDate: '1956-11-22',
     isLiving: false, generationCharacter: '致', generationNumber: 13,
-    privacyLevel: 'Public',
-    biography: '守礼独子，清华学堂毕业（1909），赴美留学康奈尔大学，归国后任南洋公学教授。',
+    courtesyName: '德清',
+    biography: '守礼之子，南洋公学教授。曾在南洋公学就读期间与陈氏【陈怀祖】为同窗挚友。',
     ancestralPlaceId: placeShanghai.id,
     patrilinealDna: 'O-M122',
-  });
-  await addPerson('chen_daughter', {
-    surname: '陈', givenName: '婉', sex: 'Female',
-    birthDate: '1880-09-30', deathDate: '1965-02-14',
-    isLiving: false, generationNumber: 13,
-    matrilinealDna: 'D4',
-    privacyLevel: 'Public',
-    biography: '陈氏（陈婉），上海陈氏之女，嫁入张氏。',
-    ancestralPlaceId: placeShanghai.id,
+    dnaSampleId: 'DNA-ZHANG-013',
+    // Close match DNA markers
+    dnaMarkers: 'DYS393=13;DYS390=24;DYS19=14;DYS391=11;D3S1358=15,16',
   });
 
-  // Gen 3 — 孙辈
-  await addPerson('yujia', {
+  await addZhang('yujia', {
     surname: '张', givenName: '宇佳', sex: 'Male',
     birthDate: '1898-11-12', deathDate: '1978-04-20',
     isLiving: false, generationCharacter: '宇', generationNumber: 14,
-    privacyLevel: 'Public',
     biography: '致远之子，清华学校毕业，工程师。',
-    ancestralPlaceId: placeShanghai.id,
     patrilinealDna: 'O-M122',
-  });
-  await addPerson('yuting', {
-    surname: '张', givenName: '宇婷', sex: 'Female',
-    birthDate: '1902-07-08', deathDate: '1989-12-25',
-    isLiving: false, generationCharacter: '宇', generationNumber: 14,
-    matrilinealDna: 'D4',
-    ancestralPlaceId: placeNanjing.id,
-  });
-  await addPerson('yubo', {
-    surname: '张', givenName: '宇博', sex: 'Male',
-    birthDate: '1903-03-17', deathDate: '1985-06-30',
-    isLiving: false, generationCharacter: '宇', generationNumber: 14,
-    privacyLevel: 'Public',
-    patrilinealDna: 'O-M122',
-    ancestralPlaceId: placeSuzhou.id,
-  });
-  await addPerson('yujing', {
-    surname: '张', givenName: '宇晶', sex: 'Female',
-    birthDate: '1905-09-22', deathDate: '1992-08-15',
-    isLiving: false, generationCharacter: '宇', generationNumber: 14,
-    matrilinealDna: 'D4',
-    ancestralPlaceId: placeShanghai.id,
   });
 
-  // Gen 4 — 曾孙 (在世 demo)
-  await addPerson('haoran', {
+  await addZhang('haoran', {
     surname: '张', givenName: '浩然', sex: 'Male',
     birthDate: '1948-03-15',
     isLiving: true, generationCharacter: '浩', generationNumber: 15,
-    privacyLevel: 'Private',
-    biography: '宇佳之子，现居上海，退休教授。本族谱现任主编。',
-    ancestralPlaceId: placeShanghai.id,
+    biography: '宇佳之子，退休教授。本族谱现任主编。',
     patrilinealDna: 'O-M122',
   });
-  await addPerson('haoyue', {
-    surname: '张', givenName: '皓月', sex: 'Female',
-    birthDate: '1952-08-20',
-    isLiving: true, generationCharacter: '浩', generationNumber: 15,
-    privacyLevel: 'FamilyOnly',
-    matrilinealDna: 'D4',
-    ancestralPlaceId: placeShanghai.id,
-  });
 
-  // 8. Create kinship relations
-  async function addRelation(fromKey, toKey, type, opts = {}) {
-    await prisma.kinshipRelation.create({
-      data: {
-        projectId: project.id,
-        fromPersonId: persons[fromKey].id,
-        toPersonId: persons[toKey].id,
-        relationType: type,
-        inverseRelationType: opts.inverse,
-        status: 'CONFIRMED',
-        confidence: 0.95,
-        sourceId: source.id,
-      },
+
+  // --- CREATE PEOPLE FOR LI CLAN (P2) ---
+  const li = {};
+  async function addLi(key, data) {
+    li[key] = await prisma.person.create({
+      data: { projectId: projectLi.id, ...data }
     });
   }
 
-  // 长兄家庭
-  await addRelation('shouren', 'wang_wife', 'SPOUSE_OF', { inverse: 'SPOUSE_OF' });
-  await addRelation('shouren', 'zhiyuan', 'BIOLOGICAL_FATHER_OF', { inverse: 'BIOLOGICAL_CHILD_OF' });
-  await addRelation('wang_wife', 'zhiyuan', 'BIOLOGICAL_MOTHER_OF', { inverse: 'BIOLOGICAL_CHILD_OF' });
-  await addRelation('shouren', 'zhiya', 'BIOLOGICAL_FATHER_OF', { inverse: 'BIOLOGICAL_CHILD_OF' });
-  await addRelation('wang_wife', 'zhiya', 'BIOLOGICAL_MOTHER_OF', { inverse: 'BIOLOGICAL_CHILD_OF' });
+  await addLi('libingheng', {
+    surname: '李', givenName: '秉恒', sex: 'Male',
+    birthDate: '1846-01-20', deathDate: '1918-10-15',
+    isLiving: false, generationNumber: 18,
+    courtesyName: '敬斋',
+    biography: '吴门绸缎大商，创办“李瑞丰”丝绸商号。与张守义为生意密友。',
+    ancestralPlaceId: placeSuzhou.id,
+    patrilinealDna: 'O-CTS201',
+  });
 
-  // 次兄家庭
-  await addRelation('shouyi', 'li_wife', 'SPOUSE_OF', { inverse: 'SPOUSE_OF' });
-  await addRelation('shouyi', 'zhiqiang', 'BIOLOGICAL_FATHER_OF', { inverse: 'BIOLOGICAL_CHILD_OF' });
-  await addRelation('li_wife', 'zhiqiang', 'BIOLOGICAL_MOTHER_OF', { inverse: 'BIOLOGICAL_CHILD_OF' });
+  await addLi('liwannian', {
+    surname: '李', givenName: '万年', sex: 'Male',
+    birthDate: '1873-04-15', deathDate: '1942-12-05',
+    isLiving: false, generationNumber: 19,
+    courtesyName: '延之',
+    biography: '秉恒长子。迎娶南京张氏宗谱【张致雅】为妻，承袭家族丝绸商会。',
+    ancestralPlaceId: placeSuzhou.id,
+    patrilinealDna: 'O-CTS201',
+  });
 
-  // 三弟家庭
-  await addRelation('shouli', 'chen_wife', 'SPOUSE_OF', { inverse: 'SPOUSE_OF' });
-  await addRelation('shouli', 'zhixin', 'BIOLOGICAL_FATHER_OF', { inverse: 'BIOLOGICAL_CHILD_OF' });
-  await addRelation('chen_wife', 'zhixin', 'BIOLOGICAL_MOTHER_OF', { inverse: 'BIOLOGICAL_CHILD_OF' });
+  await addLi('lihuai', {
+    surname: '李', givenName: '怀', sex: 'Male',
+    birthDate: '1901-08-30', deathDate: '1982-05-18',
+    isLiving: false, generationNumber: 20,
+    courtesyName: '归真',
+    biography: '万年与张致雅所生独子，后移居上海，在法租界任律师。',
+    ancestralPlaceId: placeSuzhou.id,
+    patrilinealDna: 'O-CTS201',
+  });
 
-  // 致新与陈婉 (堂妹婚)
-  await addRelation('zhixin', 'chen_daughter', 'SPOUSE_OF', { inverse: 'SPOUSE_OF' });
 
-  // Gen 3 → Gen 4
-  await addRelation('zhiyuan', 'yujia', 'BIOLOGICAL_FATHER_OF', { inverse: 'BIOLOGICAL_CHILD_OF' });
-  await addRelation('zhiyuan', 'yuting', 'BIOLOGICAL_FATHER_OF', { inverse: 'BIOLOGICAL_CHILD_OF' });
-  await addRelation('zhiqiang', 'yubo', 'BIOLOGICAL_FATHER_OF', { inverse: 'BIOLOGICAL_CHILD_OF' });
-  await addRelation('zhixin', 'yujing', 'BIOLOGICAL_FATHER_OF', { inverse: 'BIOLOGICAL_CHILD_OF' });
-  await addRelation('chen_daughter', 'yujing', 'BIOLOGICAL_MOTHER_OF', { inverse: 'BIOLOGICAL_CHILD_OF' });
+  // --- CREATE PEOPLE FOR CHEN CLAN (P3) ---
+  const chen = {};
+  async function addChen(key, data) {
+    chen[key] = await prisma.person.create({
+      data: { projectId: projectChen.id, ...data }
+    });
+  }
 
-  // Gen 4 → Gen 5 (在世)
-  await addRelation('yujia', 'haoran', 'BIOLOGICAL_FATHER_OF', { inverse: 'BIOLOGICAL_CHILD_OF' });
-  await addRelation('yujing', 'haoyue', 'BIOLOGICAL_MOTHER_OF', { inverse: 'BIOLOGICAL_CHILD_OF' });
+  await addChen('chenshizeng', {
+    surname: '陈', givenName: '石曾', sex: 'Male',
+    birthDate: '1850-02-14', deathDate: '1925-06-22',
+    isLiving: false, generationNumber: 23,
+    biography: '陈氏渤海支派宗长，上海名儒。',
+    ancestralPlaceId: placeShanghai.id,
+    patrilinealDna: 'O-M122',
+  });
 
-  // 兄弟关系 (用 ADOPTIVE 不太合适，用 SIBLING_OF 标记)
-  await addRelation('shouren', 'shouyi', 'SIBLING_OF', { inverse: 'SIBLING_OF' });
-  await addRelation('shouren', 'shouli', 'SIBLING_OF', { inverse: 'SIBLING_OF' });
-  await addRelation('shouyi', 'shouli', 'SIBLING_OF', { inverse: 'SIBLING_OF' });
-  await addRelation('zhiyuan', 'zhiqiang', 'SIBLING_OF', { inverse: 'SIBLING_OF' });
-  await addRelation('zhiyuan', 'zhixin', 'SIBLING_OF', { inverse: 'SIBLING_OF' });
-  await addRelation('zhiqiang', 'zhixin', 'SIBLING_OF', { inverse: 'SIBLING_OF' });
-  await addRelation('yujia', 'yubo', 'SIBLING_OF', { inverse: 'SIBLING_OF' });
-  await addRelation('yujia', 'yujing', 'SIBLING_OF', { inverse: 'SIBLING_OF' });
-  await addRelation('yubo', 'yujing', 'SIBLING_OF', { inverse: 'SIBLING_OF' });
+  await addChen('chenhuaizu', {
+    surname: '陈', givenName: '怀祖', sex: 'Male',
+    birthDate: '1879-05-09', deathDate: '1960-03-24',
+    isLiving: false, generationNumber: 24,
+    courtesyName: '念慈',
+    biography: '石曾独子，曾留学美国哥伦比亚大学。同张致新为上海南洋公学同班同学。',
+    ancestralPlaceId: placeShanghai.id,
+    patrilinealDna: 'O-M122',
+    dnaSampleId: 'DNA-CHEN-024',
+    // Matching DNA markers with Zhang Zhixin (differing by only 1 STR mutation)
+    dnaMarkers: 'DYS393=13;DYS390=24;DYS19=14;DYS391=11;D3S1358=15,17',
+  });
 
-  // 9. Create a Generation record
-  await prisma.generation.createMany({
+
+  // ==========================================
+  // IN-PROJECT & CROSS-PROJECT KINSHIP
+  // ==========================================
+  
+  // 1. Zhang Clan Kinships (P1)
+  await prisma.kinshipRelation.createMany({
     data: [
-      { projectId: project.id, generationNumber: 12, character: '守', poem: '守道传家久' },
-      { projectId: project.id, generationNumber: 13, character: '致', poem: '致知以修身' },
-      { projectId: project.id, generationNumber: 14, character: '宇', poem: '宇内承先志' },
-      { projectId: project.id, generationNumber: 15, character: '浩', poem: '浩然与天游' },
-    ],
+      { projectId: projectZhang.id, fromPersonId: zhang.shouren.id, toPersonId: zhang.wang_wife.id, relationType: 'SPOUSE_OF', status: 'CONFIRMED' },
+      { projectId: projectZhang.id, fromPersonId: zhang.shouren.id, toPersonId: zhang.zhiyuan.id, relationType: 'BIOLOGICAL_FATHER_OF', status: 'CONFIRMED' },
+      { projectId: projectZhang.id, fromPersonId: zhang.wang_wife.id, toPersonId: zhang.zhiyuan.id, relationType: 'BIOLOGICAL_MOTHER_OF', status: 'CONFIRMED' },
+      { projectId: projectZhang.id, fromPersonId: zhang.shouren.id, toPersonId: zhang.zhiya.id, relationType: 'BIOLOGICAL_FATHER_OF', status: 'CONFIRMED' },
+      { projectId: projectZhang.id, fromPersonId: zhang.wang_wife.id, toPersonId: zhang.zhiya.id, relationType: 'BIOLOGICAL_MOTHER_OF', status: 'CONFIRMED' },
+      { projectId: projectZhang.id, fromPersonId: zhang.shouli.id, toPersonId: zhang.zhixin.id, relationType: 'BIOLOGICAL_FATHER_OF', status: 'CONFIRMED' },
+      { projectId: projectZhang.id, fromPersonId: zhang.zhiyuan.id, toPersonId: zhang.yujia.id, relationType: 'BIOLOGICAL_FATHER_OF', status: 'CONFIRMED' },
+      { projectId: projectZhang.id, fromPersonId: zhang.yujia.id, toPersonId: zhang.haoran.id, relationType: 'BIOLOGICAL_FATHER_OF', status: 'CONFIRMED' },
+      { projectId: projectZhang.id, fromPersonId: zhang.shouren.id, toPersonId: zhang.shouyi.id, relationType: 'SIBLING_OF', status: 'CONFIRMED' },
+      { projectId: projectZhang.id, fromPersonId: zhang.shouren.id, toPersonId: zhang.shouli.id, relationType: 'SIBLING_OF', status: 'CONFIRMED' }
+    ]
   });
 
-  // 10. Create a Branch (房支)
-  await prisma.branch.create({
-    data: {
-      projectId: project.id,
-      name: '长房（守仁支）',
-      description: '张守仁后裔，主要分布于南京、上海。',
-      founderId: persons.shouren.id,
-    },
-  });
-  await prisma.branch.create({
-    data: {
-      projectId: project.id,
-      name: '次房（守义支）',
-      description: '张守义后裔，主要分布于苏州。',
-      founderId: persons.shouyi.id,
-    },
-  });
-  await prisma.branch.create({
-    data: {
-      projectId: project.id,
-      name: '三房（守礼支）',
-      description: '张守礼后裔，主要分布于上海。',
-      founderId: persons.shouli.id,
-    },
+  // 2. Li Clan Kinships (P2)
+  await prisma.kinshipRelation.createMany({
+    data: [
+      { projectId: projectLi.id, fromPersonId: li.libingheng.id, toPersonId: li.liwannian.id, relationType: 'BIOLOGICAL_FATHER_OF', status: 'CONFIRMED' },
+      { projectId: projectLi.id, fromPersonId: li.liwannian.id, toPersonId: li.lihuai.id, relationType: 'BIOLOGICAL_FATHER_OF', status: 'CONFIRMED' }
+    ]
   });
 
-  console.log('[seed] ✅ 张氏族谱 demo 数据写入成功！');
-  console.log('[seed] 登录账号：');
-  console.log('       admin / admin123 (ADMIN)');
-  console.log('       zhang_curator / editor123 (OWNER)');
-  console.log('       guest / editor123 (VIEWER)');
+  // 3. Chen Clan Kinships (P3)
+  await prisma.kinshipRelation.createMany({
+    data: [
+      { projectId: projectChen.id, fromPersonId: chen.chenshizeng.id, toPersonId: chen.chenhuaizu.id, relationType: 'BIOLOGICAL_FATHER_OF', status: 'CONFIRMED' }
+    ]
+  });
+
+  // 4. CROSS-PROJECT MARRIAGES & CHILD RELATIONSHIPS
+  // Connect Li Wannian (Li Clan) and Zhang Zhiya (Zhang Clan)
+  await prisma.kinshipRelation.create({
+    data: {
+      projectId: projectLi.id,
+      fromPersonId: li.liwannian.id,
+      toPersonId: zhang.zhiya.id, // Links directly across projects!
+      relationType: 'SPOUSE_OF',
+      status: 'CONFIRMED',
+      notes: '跨族谱联姻：娶南京张守仁长女张致雅'
+    }
+  });
+
+  await prisma.kinshipRelation.create({
+    data: {
+      projectId: projectZhang.id,
+      fromPersonId: zhang.zhiya.id,
+      toPersonId: li.liwannian.id, // Links directly across projects!
+      relationType: 'SPOUSE_OF',
+      status: 'CONFIRMED',
+      notes: '跨族谱联姻：出嫁至苏州商贾李万年'
+    }
+  });
+
+  // Connect Li Huai (Li Clan) to mother Zhang Zhiya (Zhang Clan)
+  await prisma.kinshipRelation.create({
+    data: {
+      projectId: projectLi.id,
+      fromPersonId: zhang.zhiya.id, // Mother from Zhang Clan
+      toPersonId: li.lihuai.id, // Son in Li Clan
+      relationType: 'BIOLOGICAL_MOTHER_OF',
+      status: 'CONFIRMED',
+      notes: '母系跨族谱追溯'
+    }
+  });
+
+
+  // ==========================================
+  // CROSS-PROJECT SOCIAL ASSOCIATIONS
+  // ==========================================
+  
+  // Classmate relationship: Zhang Zhixin (P1) <-> Chen Huaizu (P3)
+  await prisma.socialAssociation.create({
+    data: {
+      projectId: projectZhang.id,
+      fromId: zhang.zhixin.id,
+      toId: chen.chenhuaizu.id,
+      relationType: 'COLLEAGUE',
+      startDate: '1905',
+      endDate: '1909',
+      notes: '上海南洋公学同窗同届同学（1905年入学）'
+    }
+  });
+
+  await prisma.socialAssociation.create({
+    data: {
+      projectId: projectChen.id,
+      fromId: chen.chenhuaizu.id,
+      toId: zhang.zhixin.id,
+      relationType: 'COLLEAGUE',
+      startDate: '1905',
+      endDate: '1909',
+      notes: '上海南洋公学同窗同届同学（1905年入学）'
+    }
+  });
+
+
+  // ==========================================
+  // ENRICH WITH CAREERS, STATUS RECORDS & CUSTOM FIELDS
+  // ==========================================
+
+  // Zhang Zhixin (P1) Career & Education
+  await prisma.officeOccupation.create({
+    data: {
+      projectId: projectZhang.id,
+      personId: zhang.zhixin.id,
+      title: '南洋公学物理学教授',
+      type: 'ACADEMIC',
+      placeId: placeShanghai.id,
+      startDate: '1912',
+      endDate: '1937'
+    }
+  });
+
+  await prisma.statusRecord.create({
+    data: {
+      projectId: projectZhang.id,
+      personId: zhang.zhixin.id,
+      statusType: 'DEGREE',
+      statusValue: '清华学堂公派留美康奈尔大学理学学士',
+      date: '1911'
+    }
+  });
+
+  // Li Wannian (P2) custom business fields
+  await prisma.officeOccupation.create({
+    data: {
+      projectId: projectLi.id,
+      personId: li.liwannian.id,
+      title: '李瑞丰绸缎庄大掌柜',
+      type: 'TRADE',
+      placeId: placeSuzhou.id,
+      startDate: '1898',
+      endDate: '1935'
+    }
+  });
+
+  await prisma.customField.create({
+    data: {
+      entityType: 'PERSON',
+      entityId: li.liwannian.id,
+      fieldName: '商会掌管范围',
+      fieldValue: '苏松沪绸缎贸易及原料运输',
+      fieldType: 'STRING'
+    }
+  });
+
+  // Chen Huaizu (P3) custom academic career
+  await prisma.officeOccupation.create({
+    data: {
+      projectId: projectChen.id,
+      personId: chen.chenhuaizu.id,
+      title: '震旦大学国文系讲师',
+      type: 'ACADEMIC',
+      placeId: placeShanghai.id,
+      startDate: '1915',
+      endDate: '1940'
+    }
+  });
+
+  console.log('[seed] ✅ Rich multi-project demo data successfully seeded!');
+  console.log('[seed] Projects generated:');
+  console.log('       1. "张氏大成宗谱 · 江南支派" (Zhang Clan)');
+  console.log('       2. "李氏家乘 · 吴郡支派" (Li Clan)');
+  console.log('       3. "陈氏宗谱 · 渤海支派" (Chen Clan)');
+  console.log('[seed] Multi-clan relations:');
+  console.log('       - Marriage: Zhang Zhiya (P1) <-> Li Wannian (P2)');
+  console.log('       - Classmates: Zhang Zhixin (P1) <-> Chen Huaizu (P3) at Nanyang Public School (1905)');
+  console.log('       - DNA genetic linkage: Zhang Zhixin (P1) <-> Chen Huaizu (P3) O-M122 STR match');
 }
 
 main()
   .catch((e) => {
-    console.error('[seed] ❌ Failed:', e);
+    console.error('[seed] ❌ Seeding failed:', e);
     process.exit(1);
   })
   .finally(async () => {
