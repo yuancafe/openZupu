@@ -83,6 +83,44 @@ describe('AuthController', () => {
       );
     });
 
+    it('should use cross-site cookie settings in production', async () => {
+      const originalNodeEnv = process.env.NODE_ENV;
+      try {
+        process.env.NODE_ENV = 'production';
+        const mockUser = {
+          id: 'user-1',
+          username: 'testuser',
+          password: 'hashedpassword',
+          role: 'USER',
+        };
+        jest.spyOn(prisma.user, 'findUnique').mockResolvedValue(mockUser as any);
+        (bcrypt.compare as jest.Mock).mockResolvedValue(true);
+
+        const mockRes = {
+          cookie: jest.fn(),
+          clearCookie: jest.fn(),
+        } as any;
+
+        await controller.login({
+          username: 'testuser',
+          password: 'password123',
+        }, mockRes);
+
+        expect(mockRes.cookie).toHaveBeenCalledWith(
+          'token',
+          'mock-token',
+          expect.objectContaining({
+            httpOnly: true,
+            secure: true,
+            sameSite: 'none',
+            path: '/',
+          }),
+        );
+      } finally {
+        process.env.NODE_ENV = originalNodeEnv;
+      }
+    });
+
     it('should throw UnauthorizedException if password is invalid', async () => {
       const mockUser = {
         id: 'user-1',

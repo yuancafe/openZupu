@@ -46,18 +46,12 @@ export class AuthController {
 
     // Set HTTP-only cookies
     res.cookie('token', tokens.access_token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      path: '/',
+      ...this.authCookieOptions(),
       maxAge: 15 * 60 * 1000, // 15 mins
     });
 
     res.cookie('refreshToken', tokens.refresh_token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      path: '/',
+      ...this.authCookieOptions(),
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     });
 
@@ -104,18 +98,12 @@ export class AuthController {
 
     // Set new cookies
     res.cookie('token', tokens.access_token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      path: '/',
+      ...this.authCookieOptions(),
       maxAge: 15 * 60 * 1000,
     });
 
     res.cookie('refreshToken', tokens.refresh_token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      path: '/',
+      ...this.authCookieOptions(),
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
@@ -133,9 +121,20 @@ export class AuthController {
       await this.authService.logout(refreshToken);
     }
 
-    res.clearCookie('token');
-    res.clearCookie('refreshToken');
+    res.clearCookie('token', this.authCookieOptions());
+    res.clearCookie('refreshToken', this.authCookieOptions());
 
     return { success: true };
+  }
+
+  private authCookieOptions(): express.CookieOptions {
+    const isProduction = process.env.NODE_ENV === 'production';
+
+    return {
+      httpOnly: true,
+      secure: isProduction,
+      sameSite: isProduction ? 'none' : 'lax',
+      path: '/',
+    };
   }
 }
