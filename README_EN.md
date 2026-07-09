@@ -9,6 +9,10 @@
 ## Key Features
 
 - 🏠 **Ready-to-use Lightweight Architecture**: Built on NestJS + Next.js + Prisma + PostgreSQL, making it suitable for local development, private deployments, and the Render demo stack.
+- 📊 **Statistics Dashboard & Migration Timeline (V1.6)**:
+  - **Clan Statistics Panel**: Displays real-time metrics including total members, average lifespan, generational distribution chart, and Y-DNA/mtDNA haplogroup coverage.
+  - **Migration Historical Timeline**: Traverses and maps chronological "Birth", "Death", and "Burial" location points to tell the geographic migration story of the family.
+  - **SVG Concentric Fan Chart**: Visualizes 4+ generations of ancestors or descendants in a radial concentric layout with hover highlights and interactive profile links.
 - 🏮 **Chinese Vertical Pedigree & Printing (V1.5)**:
   - Supports standard **Su-Style Lineage Pedigree Chart** (vertical text reading, columns flowing from right to left, side-by-side spouse rendering) and **Ou-Style Details Registry** (detailed columnar textual cards with classical red borders).
   - Built-in custom settings to configure generation range, select branch roots, filter living persons (privacy shield), and triggers clean **A4 landscape printing layout** via `@media print`.

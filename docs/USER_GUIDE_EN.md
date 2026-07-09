@@ -94,6 +94,9 @@ If you have photos of scanned traditional Chinese books, you can use the built-i
 1.  Go to **"Family Tree View"**.
 2.  Enter the name of a root ancestor (e.g., `Zhang Shouren`).
 3.  The system renders an interactive **Descendant Tree** or **Ancestry Tree** showing circular avatars and biological lifespans.
+4.  **🪭 SVG Concentric Fan Chart (V1.6)**:
+    *   Select **"Fan Chart"** in the subtabs. The system will render a beautiful concentric radial fan diagram centered around the selected root ancestor.
+    *   The concentric rings propagate outwards to represent children, grandchildren, and great-grandchildren, with hover triggers highlighting the lineages. Click on any slice to navigate directly to their profile card.
 
 ### 🏮 Chinese Vertical Pedigrees & Printing (V1.5)
 For printing lineage charts, the system provides traditional vertical right-to-left layout exports:
@@ -107,6 +110,17 @@ For printing lineage charts, the system provides traditional vertical right-to-l
 5.  **🖨️ Print to Paper / PDF**:
     *   Set your filters and click **"Print Pedigree Layout"**.
     *   The browser print preview will launch. Sidebars, headers, and buttons are hidden. The page layout automatically scales to fit standard **A4 landscape printing**.
+
+### 📊 Statistics Dashboard & Migration Timeline (V1.6)
+OpenZupu incorporates premium analytical dashboards and geospatial tracking features:
+1.  **📊 Statistics Dashboard**:
+    *   Click the **"Statistics"** tab to access the dashboard.
+    *   The system calculates: total members in the book, DNA sample coverage, average lifespan (calculated from deceased ancestors with verified birth/death years), and generational range.
+    *   Includes interactive charts for gender distribution ratios, member counts per generation, and a tabular Y-DNA and mtDNA haplogroup breakdown.
+2.  **🗺️ Migration Timeline**:
+    *   Click the **"Migration"** tab. The system aggregates all birthplaces, residences, and burial locations.
+    *   These locations are sorted chronologically in a vertical family timeline with detailed generation markers and dates.
+    *   Clicking a name in the migration timeline redirects to their biography sheet, providing a geo-historical record of how the clan branches migrated across regions.
 
 ---
 

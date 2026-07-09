@@ -5,6 +5,22 @@ All notable changes to OpenZupu will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.6.0] - 2026-07-09
+### Added
+- **Statistics Dashboard Widget**: Displays metrics including total member counts, gender ratios, average biological lifespan, generational distributions, and genetic Y-DNA/mtDNA haplogroup counts.
+- **Migration & Geospatial Timeline**: Traverses birthplace, residence, and burial location events and structures them in a chronological card timeline to display geo-historical migration routes.
+- **世系扇形图 (Concentric Fan Chart)**: Renders a multi-generation concentric radial SVG fan wedge layout centered around a root ancestor, with dynamic CSS hover translations and navigation profile links.
+
+## [1.5.0] - 2026-07-08
+### Added
+- **Traditional Chinese Vertical Pedigrees**: Implemented Traditional Chinese Su-style pedigree (vertical tree layout) and Ou-style pedigree (biographical columnar layout) with right-to-left flowing styles (`writing-mode: vertical-rl`).
+- **Landscape Print Formatting**: Configured A4 landscape print CSS rules (`@media print`) and layout controls to allow printing vertical family records directly to paper or PDF files.
+
+## [1.4.0] - 2026-07-07
+### Added
+- **Multimedia Photo Support**: Added Base64 image attachment field to individual profile cards, enabling upload, cropping, and secure DB storage of portrait photos.
+- **Premium Glassmorphic UI/UX**: Redesigned dashboard and navigation tabs with glassmorphic styles, smooth transitions, color-coded gender borders, and custom parchment-themed profile pages.
+
 ## [1.3.0] - 2026-07-06
 ### Added
 - **DNA Haplogroups Support**: Added Y-DNA (patrilineal) and mtDNA (matrilineal) haplogroup recording fields to the Person schema.

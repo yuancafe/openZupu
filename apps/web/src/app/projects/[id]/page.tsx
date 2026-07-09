@@ -690,6 +690,490 @@ export default function ProjectDetails({ params }: { params: Promise<{ id: strin
     );
   };
 
+  const renderFanChart = (): React.ReactNode => {
+    const rootPerson = persons.find(p => p.id === rootPersonId);
+    if (!rootPerson) return null;
+
+    const children = getChildren(rootPerson.id);
+    
+    const wedgesLevel1: any[] = [];
+    let totalGrandchildren = 0;
+    
+    children.forEach(c => {
+      const gChildren = getChildren(c.id);
+      totalGrandchildren += gChildren.length > 0 ? gChildren.length : 1;
+      wedgesLevel1.push({
+        person: c,
+        grandchildren: gChildren
+      });
+    });
+
+    const totalWedges = totalGrandchildren > 0 ? totalGrandchildren : 1;
+    const startAngle = -Math.PI / 2;
+    const totalAngle = Math.PI * 2;
+
+    const cx = 300;
+    const cy = 300;
+
+    let currentWedgeIndex = 0;
+    const paths: React.ReactNode[] = [];
+
+    const getWedgePath = (
+      x: number, y: number,
+      innerR: number, outerR: number,
+      startA: number, endA: number,
+      fillColor: string,
+      strokeColor: string,
+      label: string,
+      personId: string
+    ) => {
+      const x1_in = x + innerR * Math.cos(startA);
+      const y1_in = y + innerR * Math.sin(startA);
+      const x2_in = x + innerR * Math.cos(endA);
+      const y2_in = y + innerR * Math.sin(endA);
+      
+      const x1_out = x + outerR * Math.cos(startA);
+      const y1_out = y + outerR * Math.sin(startA);
+      const x2_out = x + outerR * Math.cos(endA);
+      const y2_out = y + outerR * Math.sin(endA);
+
+      const largeArc = endA - startA > Math.PI ? 1 : 0;
+
+      const d = `
+        M ${x1_in} ${y1_in}
+        L ${x1_out} ${y1_out}
+        A ${outerR} ${outerR} 0 ${largeArc} 1 ${x2_out} ${y2_out}
+        L ${x2_in} ${y2_in}
+        A ${innerR} ${innerR} 0 ${largeArc} 0 ${x1_in} ${y1_in}
+        Z
+      `;
+
+      const midA = (startA + endA) / 2;
+      const midR = (innerR + outerR) / 2;
+      const tx = x + midR * Math.cos(midA);
+      const ty = y + midR * Math.sin(midA);
+
+      let rotation = (midA * 180) / Math.PI;
+      if (rotation > 90 && rotation < 270) {
+        rotation += 180;
+      }
+
+      return (
+        <g key={personId} className="group cursor-pointer select-none">
+          <path
+            d={d}
+            fill={fillColor}
+            stroke={strokeColor}
+            strokeWidth={1.5}
+            className="transition-all duration-300 hover:opacity-90 hover:stroke-amber-600"
+          />
+          <Link href={`/projects/${project.id}/persons/${personId}`}>
+            <text
+              x={tx}
+              y={ty}
+              textAnchor="middle"
+              dominantBaseline="middle"
+              transform={`rotate(${rotation}, ${tx}, ${ty})`}
+              className="text-[9px] font-bold font-serif fill-slate-900 pointer-events-none group-hover:fill-amber-900"
+            >
+              {label}
+            </text>
+          </Link>
+        </g>
+      );
+    };
+
+    paths.push(
+      <g key={rootPerson.id} className="cursor-pointer select-none">
+        <circle
+          cx={cx}
+          cy={cy}
+          r={55}
+          fill="#fdfbf7"
+          stroke="#b45309"
+          strokeWidth={3}
+          className="transition-all duration-300 hover:stroke-amber-900"
+        />
+        <Link href={`/projects/${project.id}/persons/${rootPerson.id}`}>
+          <text
+            x={cx}
+            y={cy}
+            textAnchor="middle"
+            dominantBaseline="middle"
+            className="text-xs font-serif font-extrabold fill-amber-900"
+          >
+            {rootPerson.surname}{rootPerson.givenName}
+          </text>
+        </Link>
+      </g>
+    );
+
+    wedgesLevel1.forEach((w) => {
+      const childGrandkidsCount = w.grandchildren.length > 0 ? w.grandchildren.length : 1;
+      const childWedgeAngle = (childGrandkidsCount / totalWedges) * totalAngle;
+      
+      const childStartAngle = startAngle + (currentWedgeIndex / totalWedges) * totalAngle;
+      const childEndAngle = childStartAngle + childWedgeAngle;
+
+      paths.push(
+        getWedgePath(
+          cx, cy, 55, 130,
+          childStartAngle, childEndAngle,
+          "#faf6ec", "#d97706",
+          `${w.person.surname}${w.person.givenName}`,
+          w.person.id
+        )
+      );
+
+      if (w.grandchildren.length > 0) {
+        w.grandchildren.forEach((g: any, gIndex: number) => {
+          const gStartA = childStartAngle + (gIndex / childGrandkidsCount) * childWedgeAngle;
+          const gEndA = gStartA + (1 / childGrandkidsCount) * childWedgeAngle;
+
+          paths.push(
+            getWedgePath(
+              cx, cy, 130, 205,
+              gStartA, gEndA,
+              "#fffbf2", "#f59e0b",
+              `${g.surname || ""}${g.givenName || ""}`,
+              g.id
+            )
+          );
+
+          const gChildren = getChildren(g.id);
+          if (gChildren.length > 0) {
+            gChildren.forEach((gc: any, gcIndex: number) => {
+              const gcCount = gChildren.length;
+              const gcStartA = gStartA + (gcIndex / gcCount) * (gEndA - gStartA);
+              const gcEndA = gcStartA + (1 / gcCount) * (gEndA - gStartA);
+              
+              paths.push(
+                getWedgePath(
+                  cx, cy, 205, 270,
+                  gcStartA, gcEndA,
+                  "#fdfcf7", "#fbbf24",
+                  `${gc.surname || ""}${gc.givenName || ""}`,
+                  gc.id
+                )
+              );
+            });
+          }
+        });
+      }
+
+      currentWedgeIndex += childGrandkidsCount;
+    });
+
+    return (
+      <div className="flex flex-col items-center justify-center p-6 bg-[#fdfaf2]/60 rounded-2xl border border-amber-900/10 shadow-inner">
+        <div className="border border-double border-4 border-amber-800/60 p-4 bg-white rounded-2xl shadow">
+          <svg width={600} height={600} className="max-w-full">
+            {paths}
+          </svg>
+        </div>
+        <p className="text-xs font-serif text-amber-900 mt-4 text-center max-w-md">
+          🪭 <b>世系扇形图 (Concentric Fan Chart)</b>：以 <b>{rootPerson.surname}{rootPerson.givenName}</b> 为中心，由内向外依次展现后代世系（中心为根节点，二圈为子女，三圈为孙辈，外圈为曾孙辈）。
+        </p>
+      </div>
+    );
+  };
+
+  const getStatistics = () => {
+    const total = persons.length;
+    let male = 0;
+    let female = 0;
+    let unknown = 0;
+    let deceasedCount = 0;
+    let totalAge = 0;
+    const generations: { [key: number]: number } = {};
+    const yHaplogroups: { [key: string]: number } = {};
+    const mtHaplogroups: { [key: string]: number } = {};
+    let dnaCount = 0;
+
+    persons.forEach((p) => {
+      if (p.sex === "MALE" || p.sex === "Male") male++;
+      else if (p.sex === "FEMALE" || p.sex === "Female") female++;
+      else unknown++;
+
+      if (!p.isLiving && p.birthDate && p.deathDate) {
+        const birthYear = parseInt(p.birthDate.split("-")[0]);
+        const deathYear = parseInt(p.deathDate.split("-")[0]);
+        if (!isNaN(birthYear) && !isNaN(deathYear) && deathYear >= birthYear) {
+          totalAge += (deathYear - birthYear);
+          deceasedCount++;
+        }
+      }
+
+      const gen = p.generationNumber || 1;
+      generations[gen] = (generations[gen] || 0) + 1;
+
+      if (p.dnaSampleId) {
+        dnaCount++;
+        if (p.yHaplogroup) {
+          yHaplogroups[p.yHaplogroup] = (yHaplogroups[p.yHaplogroup] || 0) + 1;
+        }
+        if (p.mtHaplogroup) {
+          mtHaplogroups[p.mtHaplogroup] = (mtHaplogroups[p.mtHaplogroup] || 0) + 1;
+        }
+      }
+    });
+
+    const averageAge = deceasedCount > 0 ? Math.round(totalAge / deceasedCount) : null;
+
+    return {
+      total,
+      male,
+      female,
+      unknown,
+      deceasedCount,
+      averageAge,
+      generations,
+      yHaplogroups,
+      mtHaplogroups,
+      dnaCount
+    };
+  };
+
+  const renderStatsTab = () => {
+    const stats = getStatistics();
+    return (
+      <div className="space-y-6 animate-fadeIn">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="bg-white border border-slate-100 p-6 rounded-2xl shadow-sm relative overflow-hidden flex flex-col justify-between">
+            <div className="absolute top-0 left-0 right-0 h-1 bg-amber-500"></div>
+            <div>
+              <span className="text-2xl">👥</span>
+              <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mt-2">Total Clan Members</h4>
+              <p className="text-3xl font-extrabold text-slate-800 mt-1">{stats.total}</p>
+            </div>
+            <p className="text-[10px] text-slate-400 mt-4">Database records registered under this repository</p>
+          </div>
+
+          <div className="bg-white border border-slate-100 p-6 rounded-2xl shadow-sm relative overflow-hidden flex flex-col justify-between">
+            <div className="absolute top-0 left-0 right-0 h-1 bg-blue-500"></div>
+            <div>
+              <span className="text-2xl">🧬</span>
+              <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mt-2">DNA Matching Coverage</h4>
+              <p className="text-3xl font-extrabold text-slate-800 mt-1">{stats.dnaCount}</p>
+            </div>
+            <p className="text-[10px] text-slate-400 mt-4">Members carrying Y-STR / mtDNA mutational samples</p>
+          </div>
+
+          <div className="bg-white border border-slate-100 p-6 rounded-2xl shadow-sm relative overflow-hidden flex flex-col justify-between">
+            <div className="absolute top-0 left-0 right-0 h-1 bg-emerald-500"></div>
+            <div>
+              <span className="text-2xl">⏳</span>
+              <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mt-2">Average Lifespan</h4>
+              <p className="text-3xl font-extrabold text-slate-800 mt-1">
+                {stats.averageAge ? `${stats.averageAge} yrs` : "N/A"}
+              </p>
+            </div>
+            <p className="text-[10px] text-slate-400 mt-4">Calculated from deceased ancestors with dates</p>
+          </div>
+
+          <div className="bg-white border border-slate-100 p-6 rounded-2xl shadow-sm relative overflow-hidden flex flex-col justify-between">
+            <div className="absolute top-0 left-0 right-0 h-1 bg-purple-500"></div>
+            <div>
+              <span className="text-2xl">🌱</span>
+              <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mt-2">Total Generations</h4>
+              <p className="text-3xl font-extrabold text-slate-800 mt-1">
+                {Object.keys(stats.generations).length}
+              </p>
+            </div>
+            <p className="text-[10px] text-slate-400 mt-4">Generational range recorded in this book</p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="bg-white border border-slate-100 p-6 rounded-2xl shadow-sm">
+            <h4 className="text-sm font-bold text-slate-800 border-b border-slate-50 pb-3 mb-4">👨‍👩‍👧‍👦 Gender Balance Ratio</h4>
+            <div className="space-y-4">
+              <div>
+                <div className="flex justify-between text-xs font-semibold mb-1">
+                  <span className="text-blue-700">Male (男)</span>
+                  <span>{stats.male} ({stats.total > 0 ? Math.round((stats.male / stats.total) * 100) : 0}%)</span>
+                </div>
+                <div className="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden">
+                  <div className="bg-blue-500 h-full rounded-full" style={{ width: `${stats.total > 0 ? (stats.male / stats.total) * 100 : 0}%` }}></div>
+                </div>
+              </div>
+              <div>
+                <div className="flex justify-between text-xs font-semibold mb-1">
+                  <span className="text-rose-700">Female (女)</span>
+                  <span>{stats.female} ({stats.total > 0 ? Math.round((stats.female / stats.total) * 100) : 0}%)</span>
+                </div>
+                <div className="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden">
+                  <div className="bg-rose-500 h-full rounded-full" style={{ width: `${stats.total > 0 ? (stats.female / stats.total) * 100 : 0}%` }}></div>
+                </div>
+              </div>
+              <div>
+                <div className="flex justify-between text-xs font-semibold mb-1">
+                  <span className="text-slate-600">Unknown/Unspecified</span>
+                  <span>{stats.unknown} ({stats.total > 0 ? Math.round((stats.unknown / stats.total) * 100) : 0}%)</span>
+                </div>
+                <div className="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden">
+                  <div className="bg-slate-400 h-full rounded-full" style={{ width: `${stats.total > 0 ? (stats.unknown / stats.total) * 100 : 0}%` }}></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white border border-slate-100 p-6 rounded-2xl shadow-sm">
+            <h4 className="text-sm font-bold text-slate-800 border-b border-slate-50 pb-3 mb-4">📈 Generational Distribution</h4>
+            <div className="space-y-3 max-h-60 overflow-y-auto pr-1">
+              {Object.entries(stats.generations)
+                .sort((a, b) => Number(a[0]) - Number(b[0]))
+                .map(([genNum, count]) => {
+                  const maxCount = Math.max(...Object.values(stats.generations));
+                  const percentage = maxCount > 0 ? (count / maxCount) * 100 : 0;
+                  return (
+                    <div key={genNum} className="flex items-center gap-3">
+                      <span className="w-14 text-xs font-bold text-slate-500 shrink-0 text-right">Gen {genNum}</span>
+                      <div className="flex-1 bg-slate-50 h-5 rounded-md overflow-hidden relative border border-slate-100">
+                        <div className="bg-amber-500/20 border-r border-amber-500 h-full transition-all duration-300" style={{ width: `${percentage}%` }}></div>
+                        <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-700">{count} members</span>
+                      </div>
+                    </div>
+                  );
+                })}
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white border border-slate-100 p-6 rounded-2xl shadow-sm">
+          <h4 className="text-sm font-bold text-slate-800 border-b border-slate-50 pb-3 mb-4">🧬 Y-DNA / mtDNA Haplogroup Coverage</h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div>
+              <h5 className="text-xs font-bold text-blue-700 mb-2 uppercase tracking-wide">Y-DNA Haplogroups (Patrilineal)</h5>
+              {Object.keys(stats.yHaplogroups).length === 0 ? (
+                <p className="text-xs text-slate-400">No patrilineal genetic samples registered.</p>
+              ) : (
+                <div className="divide-y divide-slate-100">
+                  {Object.entries(stats.yHaplogroups).map(([haplo, count]) => (
+                    <div key={haplo} className="flex justify-between py-2 text-xs font-medium text-slate-700">
+                      <span className="font-mono bg-blue-50 text-blue-800 px-2 py-0.5 rounded font-bold">{haplo}</span>
+                      <span>{count} occurrences</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div>
+              <h5 className="text-xs font-bold text-rose-700 mb-2 uppercase tracking-wide">mtDNA Haplogroups (Matrilineal)</h5>
+              {Object.keys(stats.mtHaplogroups).length === 0 ? (
+                <p className="text-xs text-slate-400">No matrilineal genetic samples registered.</p>
+              ) : (
+                <div className="divide-y divide-slate-100">
+                  {Object.entries(stats.mtHaplogroups).map(([haplo, count]) => (
+                    <div key={haplo} className="flex justify-between py-2 text-xs font-medium text-slate-700">
+                      <span className="font-mono bg-rose-50 text-rose-800 px-2 py-0.5 rounded font-bold">{haplo}</span>
+                      <span>{count} occurrences</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const getMigrationTimeline = () => {
+    const events: any[] = [];
+    persons.forEach((p) => {
+      const name = `${p.surname || ""}${p.givenName || ""}`;
+      const genNum = p.generationNumber || 1;
+      
+      if (p.birthPlace) {
+        const birthYear = p.birthDate ? parseInt(p.birthDate.split("-")[0]) : null;
+        events.push({
+          person: p,
+          name,
+          genNum,
+          type: "birth",
+          label: "Birth & Nesting (出生落户)",
+          place: p.birthPlace,
+          year: birthYear,
+          dateDesc: p.birthDate || "Date Unknown"
+        });
+      }
+      if (p.deathPlace) {
+        const deathYear = p.deathDate ? parseInt(p.deathDate.split("-")[0]) : null;
+        events.push({
+          person: p,
+          name,
+          genNum,
+          type: "death",
+          label: "Decease (寿终过世)",
+          place: p.deathPlace,
+          year: deathYear,
+          dateDesc: p.deathDate || "Date Unknown"
+        });
+      }
+    });
+
+    return events.sort((a, b) => {
+      if (a.year === null && b.year === null) return 0;
+      if (a.year === null) return 1;
+      if (b.year === null) return -1;
+      return a.year - b.year;
+    });
+  };
+
+  const renderMigrationTab = () => {
+    const timeline = getMigrationTimeline();
+    if (timeline.length === 0) {
+      return (
+        <div className="text-center py-16 text-slate-400 bg-white border border-slate-100 rounded-2xl shadow-sm">
+          <span className="text-4xl block mb-2">🗺️</span>
+          <p className="font-bold text-slate-600">No Place Events Registered</p>
+          <p className="text-xs mt-1">Add birth places or death places to family members to trace migrations.</p>
+        </div>
+      );
+    }
+
+    return (
+      <div className="bg-white border border-slate-100 rounded-2xl p-6 shadow-sm animate-fadeIn">
+        <div className="border-b border-slate-100 pb-3 mb-6">
+          <h4 className="text-lg font-bold text-slate-800">🗺️ Clan Migration & Geolocation Timeline</h4>
+          <p className="text-xs text-slate-400 mt-1">Chronological record of family migration points parsed across generations.</p>
+        </div>
+        <div className="relative border-l border-slate-200 ml-4 pl-6 space-y-8 py-2">
+          {timeline.map((evt, idx) => {
+            return (
+              <div key={idx} className="relative group">
+                <span className="absolute -left-[31px] top-1 bg-white border-2 border-amber-600 rounded-full w-4.5 h-4.5 flex items-center justify-center shadow-sm group-hover:bg-amber-600 transition-colors">
+                  <span className="w-1.5 h-1.5 bg-amber-600 rounded-full group-hover:bg-white transition-colors"></span>
+                </span>
+                
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div>
+                    <span className="text-xs font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded border border-amber-100">
+                      Gen {evt.genNum} &bull; {evt.year ? `${evt.year} AD` : "Year Unknown"}
+                    </span>
+                    <h5 className="font-serif font-extrabold text-slate-900 text-base mt-2 flex items-center gap-2">
+                      <Link href={`/projects/${project.id}/persons/${evt.person.id}`} className="hover:underline text-slate-900 hover:text-amber-800 transition-colors">
+                        {evt.name}
+                      </Link>
+                      <span className="text-xs font-semibold text-slate-400 font-sans">({evt.label})</span>
+                    </h5>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-bold bg-[#faf8f5] text-slate-700 border border-slate-100">
+                      📍 {evt.place}
+                    </span>
+                  </div>
+                </div>
+                <p className="text-xs text-slate-400 mt-1 font-mono">Date detail: {evt.dateDesc}</p>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="space-y-8 animate-fade-in">
       {/* Project Header */}
@@ -714,7 +1198,7 @@ export default function ProjectDetails({ params }: { params: Promise<{ id: strin
       </div>
 
       {/* Tabs */}
-      <div className="flex flex-wrap gap-2 p-1.5 bg-slate-100/80 rounded-xl border border-slate-200/50 max-w-2xl">
+      <div className="flex flex-wrap gap-2 p-1.5 bg-slate-100/80 rounded-xl border border-slate-200/50 max-w-4xl">
         <button
           onClick={() => setActiveTab("list")}
           className={`py-2 px-4 rounded-lg font-bold text-sm transition-all duration-300 ${
@@ -730,6 +1214,22 @@ export default function ProjectDetails({ params }: { params: Promise<{ id: strin
           }`}
         >
           🌿 {t("familyTreeTab")}
+        </button>
+        <button
+          onClick={() => setActiveTab("stats")}
+          className={`py-2 px-4 rounded-lg font-bold text-sm transition-all duration-300 ${
+            activeTab === "stats" ? "bg-slate-900 text-white shadow-md" : "text-slate-600 hover:text-slate-850 hover:bg-slate-200/50"
+          }`}
+        >
+          📊 {language === "zh" ? "数据统计" : "Statistics"}
+        </button>
+        <button
+          onClick={() => setActiveTab("migration")}
+          className={`py-2 px-4 rounded-lg font-bold text-sm transition-all duration-300 ${
+            activeTab === "migration" ? "bg-slate-900 text-white shadow-md" : "text-slate-600 hover:text-slate-850 hover:bg-slate-200/50"
+          }`}
+        >
+          🗺️ {language === "zh" ? "迁徙历史" : "Migration"}
         </button>
         <button
           onClick={() => setActiveTab("members")}
@@ -998,6 +1498,14 @@ export default function ProjectDetails({ params }: { params: Promise<{ id: strin
                 >
                   📜 {t("verticalRegistry")}
                 </button>
+                <button
+                  onClick={() => setTreeSubTab("fanChart")}
+                  className={`py-1.5 px-3 rounded text-xs font-medium transition-all ${
+                    treeSubTab === "fanChart" ? "bg-white text-amber-700 shadow-sm font-bold" : "text-slate-500 hover:text-slate-700"
+                  }`}
+                >
+                  🪭 {language === "zh" ? "世系扇形图" : "Fan Chart"}
+                </button>
               </div>
             </div>
 
@@ -1207,6 +1715,13 @@ export default function ProjectDetails({ params }: { params: Promise<{ id: strin
                     <div className="p-0 border border-red-200/50 rounded-lg overflow-hidden">
                       {renderVerticalRegistry()}
                     </div>
+                  </div>
+                )}
+
+                {treeSubTab === "fanChart" && (
+                  <div className="space-y-4 animate-fadeIn">
+                    <h4 className="text-sm font-semibold text-amber-800 uppercase tracking-wider mb-2">🪭 世系扇形图 (Radial Fan Chart)</h4>
+                    {renderFanChart()}
                   </div>
                 )}
               </>
@@ -1431,6 +1946,12 @@ export default function ProjectDetails({ params }: { params: Promise<{ id: strin
           </div>
         </div>
       )}
+
+      {/* 5. STATISTICS TAB */}
+      {activeTab === "stats" && renderStatsTab()}
+
+      {/* 6. MIGRATION TIMELINE TAB */}
+      {activeTab === "migration" && renderMigrationTab()}
     </div>
   );
 }
