@@ -34,7 +34,7 @@ export default function LoginPage() {
       <form onSubmit={handleLogin} className="w-full max-w-sm rounded-lg bg-white p-6 shadow-md">
         <h1 className="mb-4 text-2xl font-bold text-gray-800">Login to OpenZupu</h1>
         <p className="mb-4 rounded-md bg-blue-50 px-3 py-2 text-sm text-blue-700">
-          Demo: <span className="font-medium">guest / editor123</span>
+          Demo: <span className="font-medium">admin / admin123</span>
         </p>
         {error && <p className="mb-4 text-sm text-red-500">{error}</p>}
         <div className="mb-4">

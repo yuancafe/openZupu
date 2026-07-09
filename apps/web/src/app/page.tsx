@@ -11,10 +11,10 @@ export default function Home() {
   const [newProjectName, setNewProjectName] = useState("");
   const [newProjectDesc, setNewProjectDesc] = useState("");
 
-  const loginAsDemoGuest = async () => {
+  const loginAsDemoUser = async () => {
     const res = await apiFetch("/auth/login", {
       method: "POST",
-      body: JSON.stringify({ username: "guest", password: "editor123" }),
+      body: JSON.stringify({ username: "admin", password: "admin123" }),
     });
     if (!res.ok) {
       throw new Error("Demo login failed");
@@ -29,7 +29,7 @@ export default function Home() {
       let res = await apiFetch("/projects", { skipAuthRedirect: true });
       if (!res.ok) {
         clearAuthSession();
-        await loginAsDemoGuest();
+        await loginAsDemoUser();
         res = await apiFetch("/projects", { skipAuthRedirect: true });
       }
       if (!res.ok) {
