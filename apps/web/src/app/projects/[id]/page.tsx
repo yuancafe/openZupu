@@ -2,16 +2,18 @@
 import { useEffect, useState, use } from "react";
 import Link from "next/link";
 import { apiFetch } from "@/lib/api";
+import { useLanguage } from "@/components/LanguageContext";
 
 export default function ProjectDetails({ params }: { params: Promise<{ id: string }> }) {
   const unwrappedParams = use(params);
+  const { t, language } = useLanguage();
   const [project, setProject] = useState<any>(null);
   const [persons, setPersons] = useState<any[]>([]);
   const [relations, setRelations] = useState<any[]>([]);
   const [members, setMembers] = useState<any[]>([]);
   const [currentUser, setCurrentUser] = useState<any>(null);
 
-  // Active Tab state: 'list', 'tree', 'members'
+  // Active Tab state: 'list', 'tree', 'members', 'tools'
   const [activeTab, setActiveTab] = useState("list");
 
   // Tree Tab Substate: 'descendant', 'ancestry', 'table'
@@ -33,6 +35,10 @@ export default function ProjectDetails({ params }: { params: Promise<{ id: strin
   const [newDeathDate, setNewDeathDate] = useState("");
   const [newIsLiving, setNewIsLiving] = useState(true);
 
+  // GEDCOM Import State
+  const [gedcomFile, setGedcomFile] = useState<File | null>(null);
+  const [importStatus, setImportStatus] = useState({ text: "", isError: false, loading: false });
+
   const fetchProjectData = () => {
     apiFetch(`/projects/${unwrappedParams.id}`)
       .then((res) => res.json())
@@ -42,16 +48,17 @@ export default function ProjectDetails({ params }: { params: Promise<{ id: strin
     apiFetch(`/persons?projectId=${unwrappedParams.id}`)
       .then((res) => res.json())
       .then((data) => {
-        setPersons(data);
-        if (data.length > 0 && !rootPersonId) {
-          setRootPersonId(data[0].id);
+        const arr = Array.isArray(data) ? data : [];
+        setPersons(arr);
+        if (arr.length > 0 && !rootPersonId) {
+          setRootPersonId(arr[0].id);
         }
       })
       .catch((err) => console.error("Error fetching persons:", err));
 
     apiFetch(`/kinship-relation?projectId=${unwrappedParams.id}`)
       .then((res) => res.json())
-      .then((data) => setRelations(data))
+      .then((data) => setRelations(Array.isArray(data) ? data : []))
       .catch((err) => console.error("Error fetching relations:", err));
 
     apiFetch(`/projects/${unwrappedParams.id}/members`)
@@ -122,7 +129,7 @@ export default function ProjectDetails({ params }: { params: Promise<{ id: strin
   };
 
   const handleRemoveMember = async (memberId: string) => {
-    if (!confirm("Are you sure you want to remove this member?")) return;
+    if (!confirm(t("removeMemberConfirm"))) return;
     try {
       const res = await apiFetch(`/projects/${unwrappedParams.id}/members/${memberId}`, {
         method: "DELETE",
@@ -155,7 +162,98 @@ export default function ProjectDetails({ params }: { params: Promise<{ id: strin
     }
   };
 
-  if (!project) return <div className="p-8 text-center text-slate-500">Loading project...</div>;
+  // --- GEDCOM / GraphML / JSON & CSV Tools ---
+  const handleGedcomImport = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!gedcomFile) return;
+    setImportStatus({ text: t("importing"), isError: false, loading: true });
+
+    const reader = new FileReader();
+    reader.onload = async (evt) => {
+      try {
+        const fileContent = evt.target?.result as string;
+        const res = await apiFetch(`/projects/${unwrappedParams.id}/gedcom/import`, {
+          method: "POST",
+          body: JSON.stringify({ data: fileContent }),
+        });
+        if (res.ok) {
+          setImportStatus({ text: t("success"), isError: false, loading: false });
+          setGedcomFile(null);
+          fetchProjectData();
+        } else {
+          const errData = await res.json();
+          setImportStatus({ text: errData.message || t("error"), isError: true, loading: false });
+        }
+      } catch (err) {
+        setImportStatus({ text: t("error"), isError: true, loading: false });
+      }
+    };
+    reader.readAsText(gedcomFile);
+  };
+
+  const handleExportGedcom = async () => {
+    try {
+      const res = await apiFetch(`/projects/${unwrappedParams.id}/gedcom/export`);
+      if (res.ok) {
+        const text = await res.text();
+        const blob = new Blob([text], { type: "text/plain" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `${project.name || "export"}.ged`;
+        a.click();
+        URL.revokeObjectURL(url);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleExportGraphml = async () => {
+    try {
+      const res = await apiFetch(`/projects/${unwrappedParams.id}/export/graphml`);
+      if (res.ok) {
+        const text = await res.text();
+        const blob = new Blob([text], { type: "application/xml" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `${project.name || "export"}.graphml`;
+        a.click();
+        URL.revokeObjectURL(url);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleExportJson = () => {
+    const dataStr = JSON.stringify(persons, null, 2);
+    const blob = new Blob([dataStr], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${project.name || "backup"}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleExportCsv = () => {
+    let csvContent = "\uFEFF"; // UTF-8 BOM
+    csvContent += "ID,Surname,Given Name,Gender,Birth,Death,Status\n";
+    persons.forEach((p) => {
+      csvContent += `"${p.id}","${p.surname || ""}","${p.givenName || ""}","${p.sex || ""}","${p.birthDate || ""}","${p.deathDate || ""}","${p.isLiving ? "Living" : "Deceased"}"\n`;
+    });
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${project.name || "persons"}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  if (!project) return <div className="p-8 text-center text-slate-500">{t("loading")}</div>;
 
   const currentUserRoleInProject = members.find(m => m.userId === currentUser?.id)?.role;
   const isOwner = project.ownerId === currentUser?.id || currentUser?.role === "ADMIN" || currentUserRoleInProject === "OWNER" || currentUserRoleInProject === "ADMIN";
@@ -224,7 +322,7 @@ export default function ProjectDetails({ params }: { params: Promise<{ id: strin
         )}
         {person && (
           <span className="text-[11px] text-slate-500 mt-0.5">
-            {person.birthDate ? person.birthDate.split("-")[0] : "?"} - {person.deathDate ? person.deathDate.split("-")[0] : person.isLiving ? "Living" : "?"}
+            {person.birthDate ? person.birthDate.split("-")[0] : "?"} - {person.deathDate ? person.deathDate.split("-")[0] : person.isLiving ? t("living") : "?"}
           </span>
         )}
       </div>
@@ -234,10 +332,10 @@ export default function ProjectDetails({ params }: { params: Promise<{ id: strin
       <div className="flex flex-col items-center space-y-8 w-full overflow-x-auto p-4">
         {/* Grandparents (Gen 2) */}
         <div className="grid grid-cols-4 gap-4 w-full max-w-4xl">
-          <NodeBox person={fParents.father} title="Paternal Grandfather" />
-          <NodeBox person={fParents.mother} title="Paternal Grandmother" />
-          <NodeBox person={mParents.father} title="Maternal Grandfather" />
-          <NodeBox person={mParents.mother} title="Maternal Grandmother" />
+          <NodeBox person={fParents.father} title={`${t("paternalGrandfather")} (Father's Father)`} />
+          <NodeBox person={fParents.mother} title={`${t("paternalGrandmother")} (Father's Mother)`} />
+          <NodeBox person={mParents.father} title={`${t("maternalGrandfather")} (Mother's Father)`} />
+          <NodeBox person={mParents.mother} title={`${t("maternalGrandmother")} (Mother's Mother)`} />
         </div>
 
         {/* Connecting Lines Gen 2 -> Gen 1 */}
@@ -248,8 +346,8 @@ export default function ProjectDetails({ params }: { params: Promise<{ id: strin
 
         {/* Parents (Gen 1) */}
         <div className="grid grid-cols-2 gap-16 w-full max-w-2xl">
-          <NodeBox person={father} title="Father" />
-          <NodeBox person={mother} title="Mother" />
+          <NodeBox person={father} title={t("father")} />
+          <NodeBox person={mother} title={t("mother")} />
         </div>
 
         {/* Connecting Lines Gen 1 -> Self */}
@@ -260,12 +358,12 @@ export default function ProjectDetails({ params }: { params: Promise<{ id: strin
         {/* Root (Gen 0) */}
         <div className="w-full max-w-xs">
           <div className="p-5 rounded-lg border-2 border-blue-500 bg-blue-50/50 shadow-sm flex flex-col items-center justify-center text-center">
-            <span className="text-[10px] uppercase tracking-wider font-semibold text-blue-500">Root Person</span>
+            <span className="text-[10px] uppercase tracking-wider font-semibold text-blue-500">{t("rootPersonLabel")}</span>
             <Link href={`/projects/${project.id}/persons/${self.id}`} className="mt-1 font-bold text-blue-900 hover:text-blue-700 block text-lg">
               {self.surname ? `${self.surname} ` : ""}{self.givenName || "Unnamed"}
             </Link>
             <span className="text-xs text-blue-700 mt-1">
-              {self.birthDate ? self.birthDate : "?"} - {self.deathDate ? self.deathDate : self.isLiving ? "Living" : "?"}
+              {self.birthDate ? self.birthDate : "?"} - {self.deathDate ? self.deathDate : self.isLiving ? t("living") : "?"}
             </span>
           </div>
         </div>
@@ -273,7 +371,6 @@ export default function ProjectDetails({ params }: { params: Promise<{ id: strin
     );
   };
 
-  // --- Collapsible Descendant Tree ---
   const toggleNode = (nodeId: string) => {
     setExpandedNodes((prev) => ({ ...prev, [nodeId]: !prev[nodeId] }));
   };
@@ -281,11 +378,10 @@ export default function ProjectDetails({ params }: { params: Promise<{ id: strin
   const renderDescendantNode = (person: any, currentDepth = 0): React.ReactNode => {
     const spouses = getSpouses(person.id);
     const children = getChildren(person.id);
-    const isExpanded = expandedNodes[person.id] !== false; // expanded by default
+    const isExpanded = expandedNodes[person.id] !== false;
 
     return (
       <div key={person.id} className="pl-6 border-l-2 border-slate-200/60 my-2 relative">
-        {/* Node label */}
         <div className="flex items-center space-x-2 bg-white border border-slate-200/80 rounded-lg p-2.5 shadow-sm hover:border-slate-300 w-fit">
           {children.length > 0 && (
             <button
@@ -312,12 +408,11 @@ export default function ProjectDetails({ params }: { params: Promise<{ id: strin
           )}
           {spouses.length > 0 && (
             <span className="text-xs text-slate-400 italic">
-              ( Spouse: {spouses.map((s: any) => `${s.surname || ""}${s.givenName || "Unnamed"}`).join(", ")})
+              ({t("spouseLabel")}: {spouses.map((s: any) => `${s.surname || ""}${s.givenName || "Unnamed"}`).join(", ")})
             </span>
           )}
         </div>
 
-        {/* Recursive Children */}
         {children.length > 0 && isExpanded && (
           <div className="mt-2 space-y-1">
             {children.map((child: any) => renderDescendantNode(child, currentDepth + 1))}
@@ -327,7 +422,6 @@ export default function ProjectDetails({ params }: { params: Promise<{ id: strin
     );
   };
 
-  // --- Lineage Table Generation ---
   const generateLineageRows = () => {
     const root = persons.find((p) => p.id === rootPersonId);
     if (!root) return [];
@@ -350,7 +444,6 @@ export default function ProjectDetails({ params }: { params: Promise<{ id: strin
         relationPath: current.relation,
       });
 
-      // Spouses
       const spouses = getSpouses(current.id);
       for (const spouse of spouses) {
         if (!visited.has(spouse.id)) {
@@ -363,7 +456,6 @@ export default function ProjectDetails({ params }: { params: Promise<{ id: strin
         }
       }
 
-      // Children
       const children = getChildren(current.id);
       for (const child of children) {
         queue.push({
@@ -379,37 +471,45 @@ export default function ProjectDetails({ params }: { params: Promise<{ id: strin
 
   return (
     <div className="space-y-8">
-      <div className="flex justify-between items-start">
-        <div>
-          <h2 className="text-3xl font-bold tracking-tight text-slate-900">{project.name}</h2>
-          <p className="text-slate-500 mt-2 text-lg">{project.description}</p>
-        </div>
+      {/* Project Header */}
+      <div>
+        <h2 className="text-3xl font-bold tracking-tight text-slate-900">{project.name}</h2>
+        <p className="text-slate-500 mt-2 text-lg">{project.description || t("noProjects")}</p>
       </div>
 
+      {/* Tabs */}
       <div className="flex border-b border-slate-200">
         <button
           onClick={() => setActiveTab("list")}
-          className={`py-2 px-4 font-medium text-sm ${
-            activeTab === "list" ? "border-b-2 border-blue-600 text-blue-600" : "text-slate-500 hover:text-slate-700"
+          className={`py-2 px-4 font-medium text-sm transition-all ${
+            activeTab === "list" ? "border-b-2 border-blue-600 text-blue-600 font-semibold" : "text-slate-500 hover:text-slate-700"
           }`}
         >
-          Person List
+          📁 {t("personListTab")}
         </button>
         <button
           onClick={() => setActiveTab("tree")}
-          className={`py-2 px-4 font-medium text-sm ${
-            activeTab === "tree" ? "border-b-2 border-blue-600 text-blue-600" : "text-slate-500 hover:text-slate-700"
+          className={`py-2 px-4 font-medium text-sm transition-all ${
+            activeTab === "tree" ? "border-b-2 border-blue-600 text-blue-600 font-semibold" : "text-slate-500 hover:text-slate-700"
           }`}
         >
-          Family Tree View
+          🌿 {t("familyTreeTab")}
         </button>
         <button
           onClick={() => setActiveTab("members")}
-          className={`py-2 px-4 font-medium text-sm ${
-            activeTab === "members" ? "border-b-2 border-blue-600 text-blue-600" : "text-slate-500 hover:text-slate-700"
+          className={`py-2 px-4 font-medium text-sm transition-all ${
+            activeTab === "members" ? "border-b-2 border-blue-600 text-blue-600 font-semibold" : "text-slate-500 hover:text-slate-700"
           }`}
         >
-          Project Members
+          👥 {t("membersTab")}
+        </button>
+        <button
+          onClick={() => setActiveTab("tools")}
+          className={`py-2 px-4 font-medium text-sm transition-all ${
+            activeTab === "tools" ? "border-b-2 border-blue-600 text-blue-600 font-semibold" : "text-slate-500 hover:text-slate-700"
+          }`}
+        >
+          🛠️ {t("dataToolsTab")}
         </button>
       </div>
 
@@ -417,12 +517,12 @@ export default function ProjectDetails({ params }: { params: Promise<{ id: strin
       {activeTab === "list" && (
         <div className="bg-white border border-slate-200 rounded-lg shadow-sm">
           <div className="p-6 border-b border-slate-200 flex justify-between items-center">
-            <h3 className="text-lg font-semibold">Persons</h3>
+            <h3 className="text-lg font-semibold">{t("personListTab")}</h3>
             <button
               onClick={() => setIsCreatingPerson(!isCreatingPerson)}
-              className="bg-slate-900 hover:bg-slate-800 text-white px-4 py-2 rounded-md font-medium text-sm transition-colors"
+              className="bg-slate-900 hover:bg-slate-800 text-white px-4 py-2 rounded-md font-medium text-sm transition-colors shadow"
             >
-              {isCreatingPerson ? "Cancel" : "Add Person"}
+              {isCreatingPerson ? t("cancel") : t("addPerson")}
             </button>
           </div>
 
@@ -431,7 +531,7 @@ export default function ProjectDetails({ params }: { params: Promise<{ id: strin
               <form onSubmit={handleCreatePerson} className="space-y-4 max-w-lg">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Surname (姓)</label>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">{t("surname")} (Surname)</label>
                     <input
                       type="text"
                       value={newSurname}
@@ -440,7 +540,7 @@ export default function ProjectDetails({ params }: { params: Promise<{ id: strin
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Given Name (名)</label>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">{t("givenName")} (Given Name)</label>
                     <input
                       type="text"
                       required
@@ -452,20 +552,20 @@ export default function ProjectDetails({ params }: { params: Promise<{ id: strin
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Gender</label>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">{t("gender")}</label>
                     <select
                       value={newGender}
                       onChange={(e) => setNewGender(e.target.value)}
                       className="w-full border border-slate-300 rounded-md p-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-slate-800"
                     >
-                      <option value="UNKNOWN">Unknown</option>
-                      <option value="MALE">Male</option>
-                      <option value="FEMALE">Female</option>
-                      <option value="OTHER">Other</option>
+                      <option value="UNKNOWN">{t("unknown")}</option>
+                      <option value="MALE">{t("male")}</option>
+                      <option value="FEMALE">{t("female")}</option>
+                      <option value="OTHER">{t("other")}</option>
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Status</label>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">{t("status")}</label>
                     <div className="flex items-center mt-2 space-x-4">
                       <label className="flex items-center text-sm font-medium text-slate-700">
                         <input
@@ -474,7 +574,7 @@ export default function ProjectDetails({ params }: { params: Promise<{ id: strin
                           onChange={() => setNewIsLiving(true)}
                           className="mr-2 focus:ring-blue-500 text-blue-600"
                         />
-                        Living
+                        {t("living")}
                       </label>
                       <label className="flex items-center text-sm font-medium text-slate-700">
                         <input
@@ -483,7 +583,7 @@ export default function ProjectDetails({ params }: { params: Promise<{ id: strin
                           onChange={() => setNewIsLiving(false)}
                           className="mr-2 focus:ring-blue-500 text-blue-600"
                         />
-                        Deceased
+                        {t("deceased")}
                       </label>
                     </div>
                   </div>
@@ -513,7 +613,7 @@ export default function ProjectDetails({ params }: { params: Promise<{ id: strin
                   )}
                 </div>
                 <button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md font-medium text-sm">
-                  Save Person
+                  {t("savePerson")}
                 </button>
               </form>
             </div>
@@ -523,40 +623,42 @@ export default function ProjectDetails({ params }: { params: Promise<{ id: strin
             <table className="w-full text-left text-sm">
               <thead className="bg-slate-50 border-b border-slate-200">
                 <tr>
-                  <th className="px-6 py-3 font-medium text-slate-500">Name</th>
-                  <th className="px-6 py-3 font-medium text-slate-500">Gender</th>
-                  <th className="px-6 py-3 font-medium text-slate-500">Lifetime</th>
-                  <th className="px-6 py-3 font-medium text-slate-500">Status</th>
-                  <th className="px-6 py-3 font-medium text-slate-500 text-right">Actions</th>
+                  <th className="px-6 py-3 font-medium text-slate-500">{t("name")}</th>
+                  <th className="px-6 py-3 font-medium text-slate-500">{t("gender")}</th>
+                  <th className="px-6 py-3 font-medium text-slate-500">{t("lifetime")}</th>
+                  <th className="px-6 py-3 font-medium text-slate-500">{t("status")}</th>
+                  <th className="px-6 py-3 font-medium text-slate-500 text-right">{t("actions")}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200">
                 {persons.length === 0 ? (
                   <tr>
                     <td colSpan={5} className="px-6 py-12 text-center text-slate-500">
-                      No persons found in this project.
+                      {t("noPersons")}
                     </td>
                   </tr>
                 ) : (
                   persons.map((person) => (
                     <tr key={person.id} className="hover:bg-slate-50">
-                      <td className="px-6 py-4 font-medium text-slate-900">
+                      <td className="px-6 py-4 font-semibold text-slate-900">
                         {person.surname ? `${person.surname} ` : ""}{person.givenName || "Unnamed"}
                       </td>
-                      <td className="px-6 py-4 text-slate-600">{person.sex || "UNKNOWN"}</td>
                       <td className="px-6 py-4 text-slate-600">
-                        {person.birthDate || "?"} to {person.deathDate || (person.isLiving ? "Living" : "?")}
+                        {person.sex === "MALE" || person.sex === "Male" ? t("male") : person.sex === "FEMALE" || person.sex === "Female" ? t("female") : t("unknown")}
                       </td>
                       <td className="px-6 py-4 text-slate-600">
-                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+                        {person.birthDate || "?"} to {person.deathDate || (person.isLiving ? t("living") : t("deceased"))}
+                      </td>
+                      <td className="px-6 py-4 text-slate-600">
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${
                           person.isLiving ? "bg-green-100 text-green-800" : "bg-slate-100 text-slate-800"
                         }`}>
-                          {person.isLiving ? "Living" : "Deceased"}
+                          {person.isLiving ? t("living") : t("deceased")}
                         </span>
                       </td>
                       <td className="px-6 py-4 text-right">
-                        <Link href={`/projects/${project.id}/persons/${person.id}`} className="text-blue-600 hover:text-blue-800 font-medium text-sm">
-                          Details
+                        <Link href={`/projects/${project.id}/persons/${person.id}`} className="text-blue-600 hover:text-blue-800 font-semibold text-sm">
+                          {t("detailsLink")} &rarr;
                         </Link>
                       </td>
                     </tr>
@@ -572,21 +674,19 @@ export default function ProjectDetails({ params }: { params: Promise<{ id: strin
       {activeTab === "tree" && (
         <div className="space-y-6">
           <div className="bg-white border border-slate-200 rounded-lg shadow-sm p-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div className="flex items-center space-x-4">
-              <div>
-                <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Root Person</label>
-                <select
-                  value={rootPersonId}
-                  onChange={(e) => setRootPersonId(e.target.value)}
-                  className="border border-slate-300 rounded-md p-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-slate-800 text-sm font-medium"
-                >
-                  {persons.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.surname ? `${p.surname} ` : ""}{p.givenName || "Unnamed"}
-                    </option>
-                  ))}
-                </select>
-              </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">{t("rootPerson")}</label>
+              <select
+                value={rootPersonId}
+                onChange={(e) => setRootPersonId(e.target.value)}
+                className="border border-slate-300 rounded-md p-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-slate-800 text-sm font-medium"
+              >
+                {persons.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.surname ? `${p.surname} ` : ""}{p.givenName || "Unnamed"}
+                  </option>
+                ))}
+              </select>
             </div>
 
             <div className="flex rounded-md shadow-sm border border-slate-200 p-1 bg-slate-50">
@@ -596,7 +696,7 @@ export default function ProjectDetails({ params }: { params: Promise<{ id: strin
                   treeSubTab === "descendant" ? "bg-white text-blue-600 shadow-sm" : "text-slate-500 hover:text-slate-700"
                 }`}
               >
-                Descendant Tree (后代世系)
+                {t("descendantTree")}
               </button>
               <button
                 onClick={() => setTreeSubTab("ancestry")}
@@ -604,7 +704,7 @@ export default function ProjectDetails({ params }: { params: Promise<{ id: strin
                   treeSubTab === "ancestry" ? "bg-white text-blue-600 shadow-sm" : "text-slate-500 hover:text-slate-700"
                 }`}
               >
-                Ancestry Pedigree (祖先三代)
+                {t("ancestryTree")}
               </button>
               <button
                 onClick={() => setTreeSubTab("table")}
@@ -612,7 +712,7 @@ export default function ProjectDetails({ params }: { params: Promise<{ id: strin
                   treeSubTab === "table" ? "bg-white text-blue-600 shadow-sm" : "text-slate-500 hover:text-slate-700"
                 }`}
               >
-                Lineage Table (世代世系表)
+                {t("lineageTable")}
               </button>
             </div>
           </div>
@@ -651,18 +751,18 @@ export default function ProjectDetails({ params }: { params: Promise<{ id: strin
                       <table className="w-full text-left text-sm">
                         <thead className="bg-slate-50 border-b border-slate-200">
                           <tr>
-                            <th className="px-6 py-3 font-medium text-slate-500">Generation</th>
-                            <th className="px-6 py-3 font-medium text-slate-500">Name</th>
-                            <th className="px-6 py-3 font-medium text-slate-500">Gender</th>
-                            <th className="px-6 py-3 font-medium text-slate-500">Lifetime</th>
-                            <th className="px-6 py-3 font-medium text-slate-500">Relation Path</th>
+                            <th className="px-6 py-3 font-medium text-slate-500">{t("generationNumber")}</th>
+                            <th className="px-6 py-3 font-medium text-slate-500">{t("name")}</th>
+                            <th className="px-6 py-3 font-medium text-slate-500">{t("gender")}</th>
+                            <th className="px-6 py-3 font-medium text-slate-500">{t("lifetime")}</th>
+                            <th className="px-6 py-3 font-medium text-slate-500">{t("relationPath")}</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-200 bg-white">
                           {generateLineageRows().length === 0 ? (
                             <tr>
                               <td colSpan={5} className="px-6 py-12 text-center text-slate-400">
-                                No lineage path computed.
+                                {t("noLineageComputed")}
                               </td>
                             </tr>
                           ) : (
@@ -674,9 +774,11 @@ export default function ProjectDetails({ params }: { params: Promise<{ id: strin
                                     {person.surname ? `${person.surname} ` : ""}{person.givenName || "Unnamed"}
                                   </Link>
                                 </td>
-                                <td className="px-6 py-4 text-slate-600">{person.sex || "UNKNOWN"}</td>
                                 <td className="px-6 py-4 text-slate-600">
-                                  {person.birthDate || "?"} to {person.deathDate || (person.isLiving ? "Living" : "?")}
+                                  {person.sex === "MALE" || person.sex === "Male" ? t("male") : person.sex === "FEMALE" || person.sex === "Female" ? t("female") : t("unknown")}
+                                </td>
+                                <td className="px-6 py-4 text-slate-600">
+                                  {person.birthDate || "?"} to {person.deathDate || (person.isLiving ? t("living") : t("deceased"))}
                                 </td>
                                 <td className="px-6 py-4 text-xs text-slate-500 font-mono">{relationPath}</td>
                               </tr>
@@ -697,13 +799,13 @@ export default function ProjectDetails({ params }: { params: Promise<{ id: strin
       {activeTab === "members" && (
         <div className="bg-white border border-slate-200 rounded-lg shadow-sm">
           <div className="p-6 border-b border-slate-200 flex justify-between items-center">
-            <h3 className="text-lg font-semibold">Project Members</h3>
+            <h3 className="text-lg font-semibold">{t("membersTab")}</h3>
             {isOwner && (
               <button
                 onClick={() => setIsAddingMember(!isAddingMember)}
-                className="bg-slate-900 hover:bg-slate-800 text-white px-4 py-2 rounded-md font-medium text-sm transition-colors"
+                className="bg-slate-900 hover:bg-slate-800 text-white px-4 py-2 rounded-md font-medium text-sm transition-colors shadow"
               >
-                {isAddingMember ? "Cancel" : "Add Member"}
+                {isAddingMember ? t("cancel") : t("addMember")}
               </button>
             )}
           </div>
@@ -712,7 +814,7 @@ export default function ProjectDetails({ params }: { params: Promise<{ id: strin
             <div className="p-6 border-b border-slate-200 bg-slate-50">
               <form onSubmit={handleAddMember} className="space-y-4 max-w-md">
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Username</label>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">{t("memberUsername")}</label>
                   <input
                     type="text"
                     required
@@ -723,19 +825,19 @@ export default function ProjectDetails({ params }: { params: Promise<{ id: strin
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Project Role</label>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">{t("projectRole")}</label>
                   <select
                     value={newMemberRole}
                     onChange={(e) => setNewMemberRole(e.target.value)}
                     className="w-full border border-slate-300 rounded-md p-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-slate-800"
                   >
-                    <option value="VIEWER">Viewer (Read-only)</option>
-                    <option value="EDITOR">Editor (Edit individuals/kinship)</option>
-                    <option value="ADMIN">Admin (Configure and manage members)</option>
+                    <option value="VIEWER">{t("roleViewer")}</option>
+                    <option value="EDITOR">{t("roleEditor")}</option>
+                    <option value="ADMIN">{t("roleAdmin")}</option>
                   </select>
                 </div>
                 <button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md font-medium text-sm">
-                  Add Member to Project
+                  {t("addMember")}
                 </button>
               </form>
             </div>
@@ -745,23 +847,23 @@ export default function ProjectDetails({ params }: { params: Promise<{ id: strin
             <table className="w-full text-left text-sm">
               <thead className="bg-slate-50 border-b border-slate-200">
                 <tr>
-                  <th className="px-6 py-3 font-medium text-slate-500">Username</th>
-                  <th className="px-6 py-3 font-medium text-slate-500">Email</th>
-                  <th className="px-6 py-3 font-medium text-slate-500">Project Role</th>
-                  {isOwner && <th className="px-6 py-3 font-medium text-slate-500 text-right">Actions</th>}
+                  <th className="px-6 py-3 font-medium text-slate-500">{t("memberUsername")}</th>
+                  <th className="px-6 py-3 font-medium text-slate-500">{t("emailLabel")}</th>
+                  <th className="px-6 py-3 font-medium text-slate-500">{t("projectRole")}</th>
+                  {isOwner && <th className="px-6 py-3 font-medium text-slate-500 text-right">{t("actions")}</th>}
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200">
                 {members.length === 0 ? (
                   <tr>
                     <td colSpan={isOwner ? 4 : 3} className="px-6 py-12 text-center text-slate-500">
-                      No additional members associated with this project.
+                      {t("noMembers")}
                     </td>
                   </tr>
                 ) : (
                   members.map((member) => (
                     <tr key={member.id} className="hover:bg-slate-50">
-                      <td className="px-6 py-4 font-medium text-slate-900">{member.user?.username || "Unknown User"}</td>
+                      <td className="px-6 py-4 font-semibold text-slate-900">{member.user?.username || "Unknown User"}</td>
                       <td className="px-6 py-4 text-slate-600">{member.user?.email || "N/A"}</td>
                       <td className="px-6 py-4">
                         {isOwner && member.userId !== project.ownerId ? (
@@ -794,9 +896,9 @@ export default function ProjectDetails({ params }: { params: Promise<{ id: strin
                           {member.role !== "OWNER" && (
                             <button
                               onClick={() => handleRemoveMember(member.id)}
-                              className="text-red-600 hover:text-red-900 font-medium text-sm"
+                              className="text-red-500 hover:text-red-700 font-semibold text-xs border border-red-200 hover:border-red-300 rounded px-2 py-1 bg-red-50"
                             >
-                              Remove
+                              {t("delete")}
                             </button>
                           )}
                         </td>
@@ -806,6 +908,106 @@ export default function ProjectDetails({ params }: { params: Promise<{ id: strin
                 )}
               </tbody>
             </table>
+          </div>
+        </div>
+      )}
+
+      {/* 4. DATA TOOLS TAB */}
+      {activeTab === "tools" && (
+        <div className="space-y-6">
+          <div className="bg-white border border-slate-200 rounded-lg shadow-sm p-6">
+            <h3 className="text-xl font-bold text-slate-900 border-b border-slate-100 pb-3 mb-6 flex items-center gap-2">
+              ⚙️ {t("dataToolsTitle")}
+            </h3>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              {/* GEDCOM Import */}
+              <div className="p-6 border border-slate-200 rounded-lg bg-slate-50 flex flex-col justify-between space-y-4">
+                <div>
+                  <h4 className="font-semibold text-slate-950 text-base">📤 {t("gedcomImportTitle")}</h4>
+                  <p className="text-slate-500 text-xs mt-1.5">{t("gedcomImportDesc")}</p>
+                  
+                  {importStatus.text && (
+                    <p className={`p-2.5 rounded text-xs font-semibold border mt-3 ${
+                      importStatus.isError ? "bg-red-50 border-red-200 text-red-700" : "bg-green-50 border-green-200 text-green-700"
+                    }`}>
+                      {importStatus.text}
+                    </p>
+                  )}
+
+                  <form onSubmit={handleGedcomImport} className="mt-4 space-y-3">
+                    <label className="flex flex-col items-center justify-center border-2 border-dashed border-slate-300 rounded-lg p-5 cursor-pointer bg-white hover:bg-slate-50 transition-colors">
+                      <span className="text-2xl mb-1">📄</span>
+                      <span className="text-xs font-medium text-slate-600 text-center">{gedcomFile ? gedcomFile.name : t("clickToUpload")}</span>
+                      <input
+                        type="file"
+                        accept=".ged"
+                        required
+                        className="hidden"
+                        onChange={(e) => setGedcomFile(e.target.files?.[0] || null)}
+                      />
+                    </label>
+                    {gedcomFile && (
+                      <button
+                        type="submit"
+                        disabled={importStatus.loading}
+                        className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-md font-semibold text-xs transition-colors shadow"
+                      >
+                        {importStatus.loading ? t("importing") : t("add")}
+                      </button>
+                    )}
+                  </form>
+                </div>
+              </div>
+
+              {/* GEDCOM & GraphML Export */}
+              <div className="p-6 border border-slate-200 rounded-lg bg-slate-50 flex flex-col justify-between space-y-4">
+                <div>
+                  <h4 className="font-semibold text-slate-950 text-base">📥 {t("gedcomExportTitle")} / GraphML</h4>
+                  <p className="text-slate-500 text-xs mt-1.5">{t("gedcomExportDesc")}</p>
+                </div>
+                <div className="space-y-3">
+                  <button
+                    onClick={handleExportGedcom}
+                    className="w-full flex items-center justify-center space-x-2 bg-slate-900 hover:bg-slate-800 text-white py-2 rounded-md font-semibold text-xs transition-colors shadow"
+                  >
+                    <span>📥</span>
+                    <span>{t("downloadGedcom")}</span>
+                  </button>
+                  <button
+                    onClick={handleExportGraphml}
+                    className="w-full flex items-center justify-center space-x-2 bg-slate-900 hover:bg-slate-800 text-white py-2 rounded-md font-semibold text-xs transition-colors shadow"
+                  >
+                    <span>📊</span>
+                    <span>{t("downloadGraphml")}</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* JSON/CSV backups */}
+              <div className="p-6 border border-slate-200 rounded-lg bg-slate-50 flex flex-col justify-between space-y-4 md:col-span-2">
+                <div>
+                  <h4 className="font-semibold text-slate-950 text-base">💾 {t("backupTitle")}</h4>
+                  <p className="text-slate-500 text-xs mt-1.5">{t("backupDesc")}</p>
+                </div>
+                <div className="flex flex-col sm:flex-row gap-4">
+                  <button
+                    onClick={handleExportJson}
+                    className="flex-1 flex items-center justify-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white py-2.5 rounded-md font-semibold text-xs transition-colors shadow"
+                  >
+                    <span>💾</span>
+                    <span>{t("downloadJson")}</span>
+                  </button>
+                  <button
+                    onClick={handleExportCsv}
+                    className="flex-1 flex items-center justify-center space-x-2 bg-green-600 hover:bg-green-700 text-white py-2.5 rounded-md font-semibold text-xs transition-colors shadow"
+                  >
+                    <span>📊</span>
+                    <span>{t("downloadCsv")}</span>
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       )}

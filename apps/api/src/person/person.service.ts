@@ -44,9 +44,29 @@ export class PersonService {
   }
 
   async findOne(id: string) {
-    return this.prisma.person.findUnique({
+    const person = await this.prisma.person.findUnique({
       where: { id },
+      include: {
+        nativePlace: true,
+        ancestralPlace: true,
+        residencePlace: true,
+      },
     });
+    if (!person) return null;
+
+    const occupations = await this.prisma.officeOccupation.findMany({ where: { personId: id } });
+    const statusRecords = await this.prisma.statusRecord.findMany({ where: { personId: id } });
+    const socialAssociationsFrom = await this.prisma.socialAssociation.findMany({ where: { fromId: id } });
+    const socialAssociationsTo = await this.prisma.socialAssociation.findMany({ where: { toId: id } });
+    const customFields = await this.prisma.customField.findMany({ where: { entityType: 'PERSON', entityId: id } });
+
+    return {
+      ...person,
+      occupations,
+      statusRecords,
+      socialAssociations: [...socialAssociationsFrom, ...socialAssociationsTo],
+      customFields,
+    };
   }
 
   async update(id: string, data: Prisma.PersonUncheckedUpdateInput) {

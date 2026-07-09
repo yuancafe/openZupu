@@ -1,0 +1,463 @@
+"use client";
+import React, { createContext, useContext, useState, useEffect } from "react";
+
+type Language = "zh" | "en";
+
+const translations = {
+  zh: {
+    // Navigation & Layout
+    projects: "项目列表",
+    settings: "系统设置",
+    signOut: "退出登录",
+    backToProject: "返回项目",
+    backToProjects: "返回项目列表",
+    language: "语言",
+    openZupu: "开元族谱",
+    loading: "加载中...",
+    save: "保存",
+    cancel: "取消",
+    add: "新增",
+    delete: "删除",
+    status: "状态",
+    actions: "操作",
+    name: "姓名",
+    gender: "性别",
+    unknown: "未知",
+    male: "男",
+    female: "女",
+    other: "其他",
+    living: "在世",
+    deceased: "已故",
+    edit: "编辑",
+    success: "操作成功",
+    error: "操作失败",
+
+    // Home / Dashboard
+    newProject: "新建项目",
+    createProjectTitle: "创建新项目",
+    projectName: "项目名称",
+    projectDesc: "项目描述",
+    noProjects: "未找到任何项目。创建一个来开始吧。",
+    updatedAt: "更新时间",
+
+    // Project Details
+    personListTab: "人物列表",
+    familyTreeTab: "世系图谱",
+    membersTab: "项目成员",
+    dataToolsTab: "数据工具",
+    addPerson: "新增人物",
+    savePerson: "保存人物信息",
+    surname: "姓",
+    givenName: "名",
+    lifetime: "生卒年",
+    detailsLink: "详情",
+    noPersons: "当前项目尚无人物数据。",
+    
+    // Family Tree View
+    rootPerson: "根节点人物",
+    descendantTree: "后代世系 (Descendant)",
+    ancestryTree: "祖先三代 (Ancestry)",
+    lineageTable: "世代世系表 (Table)",
+    paternalGrandfather: "祖父",
+    paternalGrandmother: "祖母",
+    maternalGrandfather: "外祖父",
+    maternalGrandmother: "外祖母",
+    father: "父亲",
+    mother: "母亲",
+    rootPersonLabel: "起祖 / 根节点",
+    spouseLabel: "配偶",
+    generationNumber: "世代/世数",
+    relationPath: "关联网络",
+    noLineageComputed: "未计算出世系路径。",
+
+    // Project Members
+    addMember: "添加成员",
+    memberUsername: "用户账号",
+    projectRole: "项目角色",
+    roleOwner: "所有者 (Owner)",
+    roleAdmin: "管理员 (Admin)",
+    roleEditor: "编辑员 (Editor)",
+    roleViewer: "只读员 (Viewer)",
+    noMembers: "暂无其他协作成员。",
+    removeMemberConfirm: "确定要移除该成员吗？",
+
+    // Data Tools
+    dataToolsTitle: "数据导入与导出控制台",
+    gedcomImportTitle: "GEDCOM 族谱导入 (.ged)",
+    gedcomImportDesc: "上传标准的 GEDCOM 族谱文件，系统将自动解析并导入到当前项目中。",
+    clickToUpload: "点击选择文件或将 GEDCOM 文件拖拽到此处",
+    importing: "解析导入中，请稍候...",
+    gedcomExportTitle: "GEDCOM 族谱导出",
+    gedcomExportDesc: "以标准的 GEDCOM 格式导出当前项目的所有家谱数据。",
+    downloadGedcom: "下载 GEDCOM 文件",
+    graphmlExportTitle: "GraphML 拓扑图导出",
+    graphmlExportDesc: "导出符合 Gephi、Neo4j 等专业图分析工具的 GraphML 关系网文件。",
+    downloadGraphml: "下载 GraphML 文件",
+    backupTitle: "数据备份与表格导出",
+    backupDesc: "以结构化的 JSON 文件备份项目，或以 CSV 表格形式导出全体成员名册。",
+    downloadJson: "导出 JSON 备份",
+    downloadCsv: "导出 CSV 成员表",
+
+    // Settings / Admin Page
+    systemSettings: "开元族谱系统管理中心",
+    languageSettingLabel: "界面语言切换",
+    userAdminTitle: "系统用户账号管理 (仅系统管理员可见)",
+    createUser: "创建新用户账号",
+    usernameLabel: "用户名 / 登录账号",
+    emailLabel: "电子邮箱",
+    passwordLabel: "登录密码",
+    roleLabel: "系统权限",
+    roleUser: "普通用户 (User)",
+    roleSystemAdmin: "系统管理员 (Admin)",
+    saveUser: "创建用户",
+    registeredUsers: "已注册系统用户",
+
+    // Person Details - Sidebar / DNA
+    dnaLineageTitle: "🧬 DNA 基因谱系",
+    editDna: "编辑 DNA 标记",
+    dnaSampleId: "DNA 样本编号",
+    patrilinealDna: "父系 Y-DNA 单倍群",
+    matrilinealDna: "母系 mtDNA 单倍群",
+    strMarkers: "STR / SNP 基因位点",
+    strMarkersPlaceholder: "例如: DYS393=13,DYS390=24,DYS19=14",
+    saveDna: "保存 DNA 基因数据",
+    dnaMatchesTitle: "🔬 基因 DNA 亲缘匹配",
+    noDnaMatches: "未发现具有基因重合的亲缘匹配。录入 Y-DNA、mtDNA 或 STR 位点后将自动推荐匹配。",
+    matchScore: "匹配度",
+    reasonsLabel: "亲缘匹配依据：",
+    kinshipTitle: "亲属关系网",
+    addRelation: "添加亲属",
+    relationTypeLabel: "关系类型",
+    targetPersonLabel: "目标对象",
+    noRelations: "暂无关联的亲属关系。",
+    saveRelation: "保存亲属关系",
+    relationChildOf: "子女 (此人是...的子女)",
+    relationFatherOf: "父亲 (此人是...的父亲)",
+    relationMotherOf: "母亲 (此人是...的母亲)",
+    relationSpouseOf: "配偶",
+    relationAdoptedTo: "收养/出嗣给...",
+
+    // Person Details - Middle Forms
+    basicProfileTitle: "基本身份资料",
+    personalNotesTitle: "生平简介与纪事",
+    biographyLabel: "人物传记",
+    notesLabel: "考证备忘 / 备注",
+    lineageNamesTitle: "谱系称谓与名讳",
+    genealogicalName: "谱名 / 族谱名",
+    courtesyName: "字",
+    artName: "号",
+    tabooName: "讳 / 讳名",
+    posthumousName: "谥号",
+    childhoodName: "乳名 / 小名",
+    originalSurname: "本姓 / 原姓",
+    adoptedSurname: "养姓 / 嗣姓",
+    generationRankTitle: "世代与字辈排行",
+    generationCharacter: "字辈 / 派语",
+    generationNumberField: "世系 / 世代数",
+    rankInSiblings: "排行 (如: 长子, 次女, 齿序三)",
+    rankInSiblingsPlaceholder: "例如: 长子 / 齿序三 / 季女",
+    historicalPlacesTitle: "历史地理与迁徙",
+    ancestralPlace: "祖籍地",
+    nativePlace: "籍贯地",
+    residencePlace: "居住/迁徙地",
+    selectPlacePlaceholder: "选择关联地点...",
+    editPlaces: "编辑历史地理",
+    savePlaces: "保存地理关联",
+    placeNameLabel: "地点名称",
+    placeTypeLabel: "地点类型",
+    historicalNameLabel: "历史地名",
+    currentNameLabel: "现代地名",
+    latLabel: "纬度",
+    lngLabel: "经度",
+    createPlaceTitle: "创建新地点",
+    
+    // Career, Education, Social Tabs
+    tabCareer: "仕途官职与职业",
+    tabEducation: "功名荣誉与学位",
+    tabSocial: "社会人际网络",
+    tabCustom: "自定义扩展字段",
+    
+    addCareer: "添加官职/职业经历",
+    careerTitle: "职务/职业名称",
+    careerType: "职业类型",
+    careerTypeCivil: "文官 (Civil)",
+    careerTypeMilitary: "武将 (Military)",
+    careerTypeTrade: "行商/行业 (Trade)",
+    careerTypeAcademic: "学界/科举 (Academic)",
+    startDate: "起始日期 (或年号)",
+    endDate: "结束日期",
+    noCareers: "暂无记录的仕途官职或职业经历。",
+    
+    addStatusRecord: "添加功名/荣誉记录",
+    statusType: "荣誉/地位类型",
+    statusValue: "功名/地位描述",
+    statusValuePlaceholder: "例如: 举人 / 进士 / 封诰命 / 流放",
+    statusDate: "获得日期 (或年号)",
+    noStatusRecords: "暂无记录的功名荣誉或身份变动。",
+    
+    addSocial: "添加社会关系 (非宗亲)",
+    socialType: "社会关系类型",
+    socialNotes: "关系备注",
+    noSocials: "暂无记录的师生、朋友或同僚社会关联。",
+    socialTypeTeacher: "老师 (Teacher)",
+    socialTypeStudent: "学生 (Student)",
+    socialTypeFriend: "朋友 (Friend)",
+    socialTypeColleague: "同僚/同事 (Colleague)",
+    
+    addCustomField: "添加自定义字段",
+    fieldName: "字段名称",
+    fieldValue: "字段内容值",
+    fieldType: "字段类型",
+    noCustomFields: "暂无任何自定义扩展数据。",
+  },
+  en: {
+    // Navigation & Layout
+    projects: "Projects",
+    settings: "Settings",
+    signOut: "Sign Out",
+    backToProject: "Back to Project",
+    backToProjects: "Back to Projects",
+    language: "Language",
+    openZupu: "OpenZupu",
+    loading: "Loading...",
+    save: "Save",
+    cancel: "Cancel",
+    add: "Add",
+    delete: "Delete",
+    status: "Status",
+    actions: "Actions",
+    name: "Name",
+    gender: "Gender",
+    unknown: "Unknown",
+    male: "Male",
+    female: "Female",
+    other: "Other",
+    living: "Living",
+    deceased: "Deceased",
+    edit: "Edit",
+    success: "Success",
+    error: "Error",
+
+    // Home / Dashboard
+    newProject: "New Project",
+    createProjectTitle: "Create New Project",
+    projectName: "Project Name",
+    projectDesc: "Project Description",
+    noProjects: "No projects found. Create one to get started.",
+    updatedAt: "Updated At",
+
+    // Project Details
+    personListTab: "Person List",
+    familyTreeTab: "Family Tree View",
+    membersTab: "Project Members",
+    dataToolsTab: "Data Tools",
+    addPerson: "Add Person",
+    savePerson: "Save Person Info",
+    surname: "Surname",
+    givenName: "Given Name",
+    lifetime: "Lifetime",
+    detailsLink: "Details",
+    noPersons: "No persons in this project yet.",
+
+    // Family Tree View
+    rootPerson: "Root Person",
+    descendantTree: "Descendant Tree",
+    ancestryTree: "Ancestry Pedigree",
+    lineageTable: "Lineage Table",
+    paternalGrandfather: "Paternal Grandfather",
+    paternalGrandmother: "Paternal Grandmother",
+    maternalGrandfather: "Maternal Grandfather",
+    maternalGrandmother: "Maternal Grandmother",
+    father: "Father",
+    mother: "Mother",
+    rootPersonLabel: "Root Person",
+    spouseLabel: "Spouse",
+    generationNumber: "Gen",
+    relationPath: "Relation Path",
+    noLineageComputed: "No lineage path computed.",
+
+    // Project Members
+    addMember: "Add Member",
+    memberUsername: "Username",
+    projectRole: "Project Role",
+    roleOwner: "Owner",
+    roleAdmin: "Admin",
+    roleEditor: "Editor",
+    roleViewer: "Viewer",
+    noMembers: "No collaborative members.",
+    removeMemberConfirm: "Are you sure you want to remove this member?",
+
+    // Data Tools
+    dataToolsTitle: "Data Import & Export Console",
+    gedcomImportTitle: "GEDCOM Pedigree Import (.ged)",
+    gedcomImportDesc: "Upload standard GEDCOM files, the system will parse and import them automatically.",
+    clickToUpload: "Click to select a file or drag and drop a GEDCOM file here",
+    importing: "Parsing and importing, please wait...",
+    gedcomExportTitle: "GEDCOM Pedigree Export",
+    gedcomExportDesc: "Export all pedigree records of the current project in standard GEDCOM format.",
+    downloadGedcom: "Download GEDCOM File",
+    graphmlExportTitle: "GraphML Relational Export",
+    graphmlExportDesc: "Export GraphML files compatible with professional graph visualization tools like Gephi or Neo4j.",
+    downloadGraphml: "Download GraphML File",
+    backupTitle: "Data Backup & Table Export",
+    backupDesc: "Backup the project as a structured JSON file, or export the entire member directory in CSV format.",
+    downloadJson: "Export JSON Backup",
+    downloadCsv: "Export CSV Directory",
+
+    // Settings / Admin Page
+    systemSettings: "OpenZupu System Administration",
+    languageSettingLabel: "UI Language Selection",
+    userAdminTitle: "System User Management (Admin Only)",
+    createUser: "Create New User Account",
+    usernameLabel: "Username",
+    emailLabel: "Email Address",
+    passwordLabel: "Password",
+    roleLabel: "System Role",
+    roleUser: "User",
+    roleSystemAdmin: "Administrator",
+    saveUser: "Create User",
+    registeredUsers: "Registered System Users",
+
+    // Person Details - Sidebar / DNA
+    dnaLineageTitle: "🧬 DNA Genetic Lineage",
+    editDna: "Edit DNA Markers",
+    dnaSampleId: "DNA Sample ID",
+    patrilinealDna: "Patrilineal Y-DNA",
+    matrilinealDna: "Matrilineal mtDNA",
+    strMarkers: "STR / SNP Markers",
+    strMarkersPlaceholder: "e.g., DYS393=13,DYS390=24,DYS19=14",
+    saveDna: "Save DNA Markers",
+    dnaMatchesTitle: "🔬 Genetic DNA Matches",
+    noDnaMatches: "No overlapping DNA matches found. Add Y-DNA, mtDNA, or STR markers to discover matches.",
+    matchScore: "Match",
+    reasonsLabel: "Matching Reasons:",
+    kinshipTitle: "Kinship Relations",
+    addRelation: "Add Relation",
+    relationTypeLabel: "Relation Type",
+    targetPersonLabel: "Target Person",
+    noRelations: "No relations found.",
+    saveRelation: "Save Relation",
+    relationChildOf: "Child of (This person is child of...)",
+    relationFatherOf: "Father of (This person is father of...)",
+    relationMotherOf: "Mother of (This person is mother of...)",
+    relationSpouseOf: "Spouse of",
+    relationAdoptedTo: "Adopted out to...",
+
+    // Person Details - Middle Forms
+    basicProfileTitle: "Basic Profile Details",
+    personalNotesTitle: "Biography & Notes",
+    biographyLabel: "Biography",
+    notesLabel: "Research Notes / Memo",
+    lineageNamesTitle: "Lineage Names & Titles",
+    genealogicalName: "Genealogical Name",
+    courtesyName: "Courtesy Name",
+    artName: "Art Name",
+    tabooName: "Taboo Name",
+    posthumousName: "Posthumous Name",
+    childhoodName: "Childhood Name",
+    originalSurname: "Original Surname",
+    adoptedSurname: "Adopted Surname",
+    generationRankTitle: "Generation & Sibling Ranking",
+    generationCharacter: "Generation Character",
+    generationNumberField: "Generation Number",
+    rankInSiblings: "Rank in Siblings",
+    rankInSiblingsPlaceholder: "e.g., Eldest Son / Third Son / Second Daughter",
+    historicalPlacesTitle: "Historical Places & Migration",
+    ancestralPlace: "Ancestral Place",
+    nativePlace: "Native Place",
+    residencePlace: "Residence / Migration",
+    selectPlacePlaceholder: "Select location...",
+    editPlaces: "Edit Places",
+    savePlaces: "Save Places",
+    placeNameLabel: "Location Name",
+    placeTypeLabel: "Location Type",
+    historicalNameLabel: "Historical Name",
+    currentNameLabel: "Current Name",
+    latLabel: "Latitude",
+    lngLabel: "Longitude",
+    createPlaceTitle: "Create New Location",
+
+    // Career, Education, Social Tabs
+    tabCareer: "Career & Offices",
+    tabEducation: "Accolades & Degrees",
+    tabSocial: "Social Networks",
+    tabCustom: "Custom Metadata",
+
+    addCareer: "Add Office/Career Record",
+    careerTitle: "Job Title / Office",
+    careerType: "Career Type",
+    careerTypeCivil: "Civil Officer",
+    careerTypeMilitary: "Military General",
+    careerTypeTrade: "Merchant / Trade",
+    careerTypeAcademic: "Scholar / Academic",
+    startDate: "Start Date (or Era)",
+    endDate: "End Date",
+    noCareers: "No recorded career or office details.",
+
+    addStatusRecord: "Add Title/Degree Record",
+    statusType: "Honors/Status Type",
+    statusValue: "Honor/Status Description",
+    statusValuePlaceholder: "e.g., Juren / Jinshi / Imperial Decree / Exile",
+    statusDate: "Award Date (or Era)",
+    noStatusRecords: "No recorded honors, status shifts or degrees.",
+
+    addSocial: "Add Social Association",
+    socialType: "Relationship Type",
+    socialNotes: "Notes",
+    noSocials: "No teacher, friend or colleague relationships recorded.",
+    socialTypeTeacher: "Teacher",
+    socialTypeStudent: "Student",
+    socialTypeFriend: "Friend",
+    socialTypeColleague: "Colleague",
+
+    addCustomField: "Add Custom Field",
+    fieldName: "Field Name",
+    fieldValue: "Field Value",
+    fieldType: "Field Type",
+    noCustomFields: "No custom metadata fields recorded.",
+  }
+};
+
+interface LanguageContextProps {
+  language: Language;
+  setLanguage: (lang: Language) => void;
+  t: (key: keyof typeof translations["en"]) => string;
+}
+
+const LanguageContext = createContext<LanguageContextProps | undefined>(undefined);
+
+export function LanguageProvider({ children }: { children: React.ReactNode }) {
+  const [language, setLanguageState] = useState<Language>("zh");
+
+  useEffect(() => {
+    const saved = localStorage.getItem("language") as Language;
+    if (saved === "zh" || saved === "en") {
+      setLanguageState(saved);
+    }
+  }, []);
+
+  const setLanguage = (lang: Language) => {
+    setLanguageState(lang);
+    localStorage.setItem("language", lang);
+    // Dispatch global event so non-react or external handlers can synchronize
+    window.dispatchEvent(new Event("languagechange"));
+  };
+
+  const t = (key: keyof typeof translations["en"]) => {
+    return translations[language][key] || translations["en"][key] || String(key);
+  };
+
+  return (
+    <LanguageContext.Provider value={{ language, setLanguage, t }}>
+      {children}
+    </LanguageContext.Provider>
+  );
+}
+
+export function useLanguage() {
+  const context = useContext(LanguageContext);
+  if (!context) {
+    throw new Error("useLanguage must be used within a LanguageProvider");
+  }
+  return context;
+}
