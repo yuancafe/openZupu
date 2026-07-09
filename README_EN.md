@@ -9,6 +9,10 @@
 ## Key Features
 
 - 🏠 **Ready-to-use Lightweight Architecture**: Built on NestJS + Next.js + Prisma + PostgreSQL, making it suitable for local development, private deployments, and the Render demo stack.
+- 📜 **Footnotes & Academic Citations (V1.7)**:
+  - **Historical Sources Registry**: Added a dedicated Sources Console in the Project Details tab, allowing owners/editors to register family genealogies (宗谱/族谱), gravestones (碑铭), official histories, manuscripts, and other reference materials.
+  - **Footnotes & Academic Citations**: Implemented a claims-evidence citation system in the Person Details page. Users can link person attributes (courtesy name, birth date, etc.) to registered sources, providing verbatim quotes, modern interpretations, and confidence/reliability ratings.
+  - **Interactive Footnote Badges**: Attached clickable superscript footnote index links next to cited fields that smooth-scroll and highlight the corresponding source record in the Footnotes section at the bottom of the page.
 - 📊 **Statistics Dashboard & Migration Timeline (V1.6)**:
   - **Clan Statistics Panel**: Displays real-time metrics including total members, average lifespan, generational distribution chart, and Y-DNA/mtDNA haplogroup coverage.
   - **Migration Historical Timeline**: Traverses and maps chronological "Birth", "Death", and "Burial" location points to tell the geographic migration story of the family.

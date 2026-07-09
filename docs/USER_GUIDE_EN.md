@@ -74,11 +74,19 @@ OpenZupu makes establishing relationships simple:
 
 ## 4. Advanced Features: Sources & OCR Text Extraction
 
-### Managing Sources (Proof)
-Good genealogies require evidence. Link historical sources to individuals:
-1.  Create a source in **"Sources"** (e.g., *Lin Clan Pedigree, Vol 3, Page 12*).
-2.  Link this source when creating or updating a person profile.
-3.  Future researchers will instantly see the source references, raising the scholarly value of the database.
+### Academic Citations & Sources (Citations & Sources) (V1.7)
+Genealogies require rigorous evidence. Especially for distant ancestors, records between different family trees might conflict. OpenZupu introduces a scholarly claims-evidence citation system:
+1.  **Registering Sources (Sources Console)**:
+    *   In the project details page, click the **"Sources"** tab.
+    *   Click **"Add Source"** to register reference materials, including: family genealogies, gravestones, archives, manuscripts, and other documents.
+    *   Enter the source's dynasty, author, publishing year, volume, page number, and URL link.
+2.  **Attaching Citations (Person Citations)**:
+    *   In the Person Details page, locate the **"Footnotes & Citations"** card at the bottom, and click **"Add Citation"**.
+    *   **Select Cited Field**: Choose a field (e.g. Courtesy Name, Given Name, Birth Date, Biography, etc.), select a registered source, and record a **Verbatim Excerpt (Quote)** from the source text and your **Commentary (Interpretation)**.
+    *   **Set Confidence Level**: Select `HIGH` (e.g. gravestones or primary genealogies), `MEDIUM` (e.g. oral history), or `LOW` (e.g. speculative claims) to build a robust evidentiary rating.
+3.  **Interactive Footnote Badges**:
+    *   When a field is cited, a small superscript link (e.g., `[1]`) automatically appears next to the field label.
+    *   Clicking the superscript badge triggers a smooth scroll animation directly to the corresponding citation details row in the footnotes section at the bottom.
 
 ### Scanned Book Character Extraction (OCR)
 If you have photos of scanned traditional Chinese books, you can use the built-in OCR tool:

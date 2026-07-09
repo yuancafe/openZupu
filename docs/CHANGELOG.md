@@ -5,6 +5,12 @@ All notable changes to OpenZupu will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.7.0] - 2026-07-09
+### Added
+- **Historical Sources Registry**: Added a dedicated Sources Console in the Project Details tab, allowing owners/editors to register family genealogies (宗谱/族谱), gravestones (碑铭), official histories, manuscripts, and other reference materials.
+- **Footnotes & Academic Citations**: Implemented a claims-evidence citation system in the Person Details page. Users can link person attributes (courtesy name, birth date, etc.) to registered sources, providing verbatim quotes, modern interpretations, and confidence/reliability ratings.
+- **Interactive Footnote Badges**: Attached clickable superscript footnote index links next to cited fields that smooth-scroll and highlight the corresponding source record in the Footnotes section at the bottom of the page.
+
 ## [1.6.0] - 2026-07-09
 ### Added
 - **Statistics Dashboard Widget**: Displays metrics including total member counts, gender ratios, average biological lifespan, generational distributions, and genetic Y-DNA/mtDNA haplogroup counts.

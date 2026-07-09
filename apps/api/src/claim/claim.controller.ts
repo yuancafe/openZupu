@@ -28,8 +28,11 @@ export class ClaimController {
   }
 
   @Get()
-  findAll() {
-    return this.service.findAll();
+  findAll(
+    @Query('subjectType') subjectType?: string,
+    @Query('subjectId') subjectId?: string,
+  ) {
+    return this.service.findAll(subjectType, subjectId);
   }
 
   @Get(':id')

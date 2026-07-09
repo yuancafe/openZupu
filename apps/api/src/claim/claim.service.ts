@@ -10,8 +10,11 @@ export class ClaimService {
     return this.prisma.claim.create({ data });
   }
 
-  async findAll() {
-    return this.prisma.claim.findMany();
+  async findAll(subjectType?: string, subjectId?: string) {
+    const where: any = {};
+    if (subjectType) where.subjectType = subjectType;
+    if (subjectId) where.subjectId = subjectId;
+    return this.prisma.claim.findMany({ where });
   }
 
   async findOne(id: string) {

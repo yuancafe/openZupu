@@ -45,6 +45,20 @@ export default function ProjectDetails({ params }: { params: Promise<{ id: strin
   const [selectedBranchId, setSelectedBranchId] = useState<string>("");
   const [excludeLiving, setExcludeLiving] = useState<boolean>(false);
 
+  // V1.7 Sources Tab State
+  const [sources, setSources] = useState<any[]>([]);
+  const [isCreatingSource, setIsCreatingSource] = useState(false);
+  const [newSourceTitle, setNewSourceTitle] = useState("");
+  const [newSourceType, setNewSourceType] = useState("BOOK");
+  const [newSourceAuthor, setNewSourceAuthor] = useState("");
+  const [newSourceCompiler, setNewSourceCompiler] = useState("");
+  const [newSourceYear, setNewSourceYear] = useState("");
+  const [newSourceDynasty, setNewSourceDynasty] = useState("");
+  const [newSourceVolume, setNewSourceVolume] = useState("");
+  const [newSourcePage, setNewSourcePage] = useState("");
+  const [newSourceUrl, setNewSourceUrl] = useState("");
+  const [newSourceNotes, setNewSourceNotes] = useState("");
+
   const fetchProjectData = () => {
     apiFetch(`/projects/${unwrappedParams.id}`)
       .then((res) => res.json())
@@ -71,6 +85,11 @@ export default function ProjectDetails({ params }: { params: Promise<{ id: strin
       .then((res) => res.json())
       .then((data) => setMembers(Array.isArray(data) ? data : []))
       .catch((err) => console.error("Error fetching members:", err));
+
+    apiFetch(`/sources?projectId=${unwrappedParams.id}`)
+      .then((res) => res.json())
+      .then((data) => setSources(Array.isArray(data) ? data : []))
+      .catch((err) => console.error("Error fetching sources:", err));
   };
 
   useEffect(() => {
@@ -257,6 +276,42 @@ export default function ProjectDetails({ params }: { params: Promise<{ id: strin
     a.download = `${project.name || "persons"}.csv`;
     a.click();
     URL.revokeObjectURL(url);
+  };
+  const handleCreateSource = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const res = await apiFetch("/sources", {
+        method: "POST",
+        body: JSON.stringify({
+          projectId: unwrappedParams.id,
+          sourceType: newSourceType,
+          title: newSourceTitle,
+          author: newSourceAuthor,
+          compiler: newSourceCompiler,
+          year: newSourceYear,
+          dynasty: newSourceDynasty,
+          volume: newSourceVolume,
+          page: newSourcePage,
+          url: newSourceUrl,
+          notes: newSourceNotes,
+        }),
+      });
+      if (res.ok) {
+        setIsCreatingSource(false);
+        setNewSourceTitle("");
+        setNewSourceAuthor("");
+        setNewSourceCompiler("");
+        setNewSourceYear("");
+        setNewSourceDynasty("");
+        setNewSourceVolume("");
+        setNewSourcePage("");
+        setNewSourceUrl("");
+        setNewSourceNotes("");
+        fetchProjectData();
+      }
+    } catch (err) {
+      console.error("Error creating source:", err);
+    }
   };
 
   if (!project) return <div className="p-8 text-center text-slate-500">{t("loading")}</div>;
@@ -1174,6 +1229,233 @@ export default function ProjectDetails({ params }: { params: Promise<{ id: strin
     );
   };
 
+  const renderSourcesTab = () => {
+    return (
+      <div className="space-y-6 animate-fadeIn">
+        <div className="bg-white border border-slate-200 rounded-lg shadow-sm p-6">
+          <div className="flex justify-between items-center border-b border-slate-100 pb-3 mb-6">
+            <h3 className="text-xl font-bold text-slate-900 flex items-center gap-2">
+              📜 {t("sourcesTitle")}
+            </h3>
+            {isOwner && (
+              <button
+                onClick={() => setIsCreatingSource(true)}
+                className="bg-amber-600 hover:bg-amber-700 text-white px-4 py-2 rounded-lg font-bold text-xs shadow-md hover:shadow-lg transition-all"
+              >
+                ➕ {t("addSource")}
+              </button>
+            )}
+          </div>
+
+          {isCreatingSource && (
+            <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fadeIn">
+              <div className="bg-white rounded-2xl shadow-xl border border-slate-200 w-full max-w-lg overflow-hidden">
+                <div className="bg-slate-900 text-white p-5 flex justify-between items-center">
+                  <h4 className="font-bold text-sm">📜 {t("addSource")}</h4>
+                  <button onClick={() => setIsCreatingSource(false)} className="text-slate-400 hover:text-white transition-colors">✕</button>
+                </div>
+                <form onSubmit={handleCreateSource} className="p-6 space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-bold text-slate-500 uppercase mb-1">{t("sourceTitleLabel")} *</label>
+                      <input
+                        type="text"
+                        required
+                        value={newSourceTitle}
+                        onChange={(e) => setNewSourceTitle(e.target.value)}
+                        className="w-full border border-slate-200 rounded-lg p-2 text-xs focus:ring-1 focus:ring-amber-500 focus:outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-slate-500 uppercase mb-1">{t("sourceTypeLabel")}</label>
+                      <select
+                        value={newSourceType}
+                        onChange={(e) => setNewSourceType(e.target.value)}
+                        className="w-full border border-slate-200 rounded-lg p-2 text-xs focus:ring-1 focus:ring-amber-500 focus:outline-none bg-white"
+                      >
+                        <option value="BOOK">BOOK (书本/谱籍)</option>
+                        <option value="GRAVESTONE">GRAVESTONE (碑刻/墓志铭)</option>
+                        <option value="ARCHIVE">ARCHIVE (历史档案)</option>
+                        <option value="MANUSCRIPT">MANUSCRIPT (手稿)</option>
+                        <option value="OTHER">OTHER (其他)</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-bold text-slate-500 uppercase mb-1">{t("authorLabel")}</label>
+                      <input
+                        type="text"
+                        value={newSourceAuthor}
+                        onChange={(e) => setNewSourceAuthor(e.target.value)}
+                        className="w-full border border-slate-200 rounded-lg p-2 text-xs focus:ring-1 focus:ring-amber-500 focus:outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-slate-500 uppercase mb-1">{t("dynastyLabel")}</label>
+                      <input
+                        type="text"
+                        value={newSourceDynasty}
+                        onChange={(e) => setNewSourceDynasty(e.target.value)}
+                        placeholder="例: 清代 / 明代"
+                        className="w-full border border-slate-200 rounded-lg p-2 text-xs focus:ring-1 focus:ring-amber-500 focus:outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-4">
+                    <div>
+                      <label className="block text-xs font-bold text-slate-500 uppercase mb-1">{t("volumeLabel")}</label>
+                      <input
+                        type="text"
+                        value={newSourceVolume}
+                        onChange={(e) => setNewSourceVolume(e.target.value)}
+                        placeholder="例: 卷三"
+                        className="w-full border border-slate-200 rounded-lg p-2 text-xs focus:ring-1 focus:ring-amber-500 focus:outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-slate-500 uppercase mb-1">{t("pageLabel")}</label>
+                      <input
+                        type="text"
+                        value={newSourcePage}
+                        onChange={(e) => setNewSourcePage(e.target.value)}
+                        placeholder="例: 45页"
+                        className="w-full border border-slate-200 rounded-lg p-2 text-xs focus:ring-1 focus:ring-amber-500 focus:outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-slate-500 uppercase mb-1">年份 (Year)</label>
+                      <input
+                        type="text"
+                        value={newSourceYear}
+                        onChange={(e) => setNewSourceYear(e.target.value)}
+                        placeholder="例: 1872"
+                        className="w-full border border-slate-200 rounded-lg p-2 text-xs focus:ring-1 focus:ring-amber-500 focus:outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">链接 / URL</label>
+                    <input
+                      type="text"
+                      value={newSourceUrl}
+                      onChange={(e) => setNewSourceUrl(e.target.value)}
+                      placeholder="https://..."
+                      className="w-full border border-slate-200 rounded-lg p-2 text-xs focus:ring-1 focus:ring-amber-500 focus:outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">描述与备注 (Notes)</label>
+                    <textarea
+                      value={newSourceNotes}
+                      onChange={(e) => setNewSourceNotes(e.target.value)}
+                      rows={3}
+                      className="w-full border border-slate-200 rounded-lg p-2 text-xs focus:ring-1 focus:ring-amber-500 focus:outline-none"
+                    />
+                  </div>
+
+                  <div className="flex justify-end gap-2 border-t border-slate-100 pt-4 mt-2">
+                    <button
+                      type="button"
+                      onClick={() => setIsCreatingSource(false)}
+                      className="bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2 rounded-lg font-bold text-xs transition-colors"
+                    >
+                      {t("cancel")}
+                    </button>
+                    <button
+                      type="submit"
+                      className="bg-amber-600 hover:bg-amber-700 text-white px-4 py-2 rounded-lg font-bold text-xs shadow-md transition-colors"
+                    >
+                      {t("save")}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
+
+          {sources.length === 0 ? (
+            <div className="text-center py-12 text-slate-400">
+              <span className="text-4xl block mb-2">📜</span>
+              <p className="font-bold">{language === "zh" ? "暂无文献记录" : "No Sources Registered"}</p>
+              <p className="text-xs mt-1">{language === "zh" ? "点击右上角登记宗谱、碑铭等参考文献。" : "Click Register New Source to record historical documents."}</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {sources.map((src) => (
+                <div key={src.id} className="border border-slate-150 rounded-2xl p-5 bg-[#faf8f5]/50 shadow-xs flex flex-col justify-between">
+                  <div>
+                    <div className="flex justify-between items-start gap-2">
+                      <span className="bg-amber-100 text-amber-800 font-bold font-mono text-[9px] px-2 py-0.5 rounded border border-amber-250 uppercase">
+                        {src.sourceType}
+                      </span>
+                      {src.dynasty && (
+                        <span className="text-[10px] font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">
+                          {src.dynasty}
+                        </span>
+                      )}
+                    </div>
+                    <h4 className="font-serif font-extrabold text-slate-900 text-base mt-2">{src.title}</h4>
+                    
+                    <div className="grid grid-cols-2 gap-2 mt-3 text-xs text-slate-650 font-serif">
+                      {src.author && (
+                        <div>
+                          <span className="font-semibold text-slate-400">{t("authorLabel")}: </span>
+                          <span className="font-bold text-slate-800">{src.author}</span>
+                        </div>
+                      )}
+                      {src.volume && (
+                        <div>
+                          <span className="font-semibold text-slate-400">{t("volumeLabel")}: </span>
+                          <span className="font-bold text-slate-800">{src.volume}</span>
+                        </div>
+                      )}
+                      {src.page && (
+                        <div>
+                          <span className="font-semibold text-slate-400">{t("pageLabel")}: </span>
+                          <span className="font-bold text-slate-800">{src.page}</span>
+                        </div>
+                      )}
+                      {src.year && (
+                        <div>
+                          <span className="font-semibold text-slate-400">年份: </span>
+                          <span className="font-bold text-slate-800">{src.year}</span>
+                        </div>
+                      )}
+                    </div>
+
+                    {src.notes && (
+                      <p className="text-xs text-slate-500 italic mt-3 bg-white p-2.5 rounded border border-slate-100 font-serif">
+                        {src.notes}
+                      </p>
+                    )}
+                  </div>
+
+                  {src.url && (
+                    <div className="mt-4 pt-3 border-t border-slate-150/50 flex justify-end">
+                      <a
+                        href={src.url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-xs font-bold text-blue-600 hover:underline flex items-center gap-1"
+                      >
+                        🔗 查看引文链接
+                      </a>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="space-y-8 animate-fade-in">
       {/* Project Header */}
@@ -1246,6 +1528,14 @@ export default function ProjectDetails({ params }: { params: Promise<{ id: strin
           }`}
         >
           🛠️ {t("dataToolsTab")}
+        </button>
+        <button
+          onClick={() => setActiveTab("sources")}
+          className={`py-2 px-4 rounded-lg font-bold text-sm transition-all duration-300 ${
+            activeTab === "sources" ? "bg-slate-900 text-white shadow-md" : "text-slate-600 hover:text-slate-850 hover:bg-slate-200/50"
+          }`}
+        >
+          📜 {t("sourcesTitle")}
         </button>
       </div>
 
@@ -1952,6 +2242,9 @@ export default function ProjectDetails({ params }: { params: Promise<{ id: strin
 
       {/* 6. MIGRATION TIMELINE TAB */}
       {activeTab === "migration" && renderMigrationTab()}
+
+      {/* 7. HISTORICAL SOURCES TAB */}
+      {activeTab === "sources" && renderSourcesTab()}
     </div>
   );
 }

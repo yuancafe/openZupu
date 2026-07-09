@@ -86,6 +86,16 @@ export default function PersonDetails({ params }: { params: Promise<{ id: string
   const [customFieldName, setCustomFieldName] = useState("");
   const [customFieldValue, setCustomFieldValue] = useState("");
 
+  // V1.7 Citations/Claims State
+  const [claims, setClaims] = useState<any[]>([]);
+  const [sources, setSources] = useState<any[]>([]);
+  const [isAddingClaim, setIsAddingClaim] = useState(false);
+  const [newClaimPredicate, setNewClaimPredicate] = useState("birthDate");
+  const [newClaimQuote, setNewClaimQuote] = useState("");
+  const [newClaimInterpretation, setNewClaimInterpretation] = useState("");
+  const [newClaimSourceId, setNewClaimSourceId] = useState("");
+  const [newClaimConfidence, setNewClaimConfidence] = useState("HIGH");
+
   const fetchPersonData = () => {
     apiFetch(`/persons/${unwrappedParams.personId}`)
       .then((res) => res.json())
@@ -140,6 +150,22 @@ export default function PersonDetails({ params }: { params: Promise<{ id: string
       .then((res) => res.json())
       .then((data) => setAllPlaces(Array.isArray(data) ? data : []))
       .catch((err) => console.error(err));
+
+    apiFetch(`/claims?subjectType=PERSON&subjectId=${unwrappedParams.personId}`)
+      .then((res) => res.json())
+      .then((data) => setClaims(Array.isArray(data) ? data : []))
+      .catch((err) => console.error("Error fetching claims:", err));
+
+    apiFetch(`/sources?projectId=${unwrappedParams.id}`)
+      .then((res) => res.json())
+      .then((data) => {
+        const arr = Array.isArray(data) ? data : [];
+        setSources(arr);
+        if (arr.length > 0) {
+          setNewClaimSourceId(arr[0].id);
+        }
+      })
+      .catch((err) => console.error("Error fetching sources:", err));
   };
 
   useEffect(() => {
@@ -392,6 +418,77 @@ export default function PersonDetails({ params }: { params: Promise<{ id: string
     }
   };
 
+  // Claims/Citations CRUD
+  const handleAddClaim = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newClaimSourceId) {
+      alert("Please register or select a source first!");
+      return;
+    }
+    try {
+      const res = await apiFetch("/claims", {
+        method: "POST",
+        body: JSON.stringify({
+          projectId: unwrappedParams.id,
+          subjectType: "PERSON",
+          subjectId: unwrappedParams.personId,
+          predicate: newClaimPredicate,
+          quote: newClaimQuote || null,
+          interpretation: newClaimInterpretation || null,
+          sourceId: newClaimSourceId,
+          confidence: newClaimConfidence,
+        }),
+      });
+      if (res.ok) {
+        setIsAddingClaim(false);
+        setNewClaimQuote("");
+        setNewClaimInterpretation("");
+        fetchPersonData();
+      }
+    } catch (err) {
+      console.error("Error adding claim:", err);
+    }
+  };
+
+  const handleDeleteClaim = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this citation?")) return;
+    try {
+      const res = await apiFetch(`/claims/${id}`, { method: "DELETE" });
+      if (res.ok) {
+        fetchPersonData();
+      }
+    } catch (err) {
+      console.error("Error deleting claim:", err);
+    }
+  };
+
+  const renderCitationBadges = (predicate: string) => {
+    const matchedClaims = claims.filter((c) => c.predicate === predicate);
+    if (matchedClaims.length === 0) return null;
+
+    return (
+      <sup className="inline-flex gap-0.5 ml-1 select-none">
+        {matchedClaims.map((c) => {
+          const index = claims.findIndex((x) => x.id === c.id) + 1;
+          return (
+            <a
+              key={c.id}
+              href={`#citation-${c.id}`}
+              title={c.quote || "Citation"}
+              className="text-[9px] font-extrabold text-amber-700 hover:text-amber-900 bg-amber-50 hover:bg-amber-100 border border-amber-300 px-0.5 rounded cursor-pointer inline-block leading-none transform translate-y-[-2px]"
+              onClick={(e) => {
+                e.preventDefault();
+                document.getElementById(`citation-${c.id}`)?.scrollIntoView({ behavior: "smooth" });
+              }}
+            >
+              {index}
+            </a>
+          );
+        })}
+      </sup>
+    );
+  };
+
   const getPersonName = (id: string) => {
     const p = allPersons.find((x) => x.id === id);
     if (!p) return "Unknown";
@@ -642,7 +739,9 @@ export default function PersonDetails({ params }: { params: Promise<{ id: string
                 <form onSubmit={handleUpdatePerson} className="space-y-4">
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-xs font-semibold text-slate-500 mb-1">{t("surname")} (Surname)</label>
+                      <label className="block text-xs font-semibold text-slate-500 mb-1">
+                        {t("surname")} (Surname) {renderCitationBadges("surname")}
+                      </label>
                       <input
                         type="text"
                         value={surname}
@@ -651,7 +750,9 @@ export default function PersonDetails({ params }: { params: Promise<{ id: string
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-semibold text-slate-500 mb-1">{t("givenName")} (Given Name)</label>
+                      <label className="block text-xs font-semibold text-slate-500 mb-1">
+                        {t("givenName")} (Given Name) {renderCitationBadges("givenName")}
+                      </label>
                       <input
                         type="text"
                         required
@@ -677,7 +778,9 @@ export default function PersonDetails({ params }: { params: Promise<{ id: string
                       </select>
                     </div>
                     <div>
-                      <label className="block text-xs font-semibold text-slate-500 mb-1">{t("birthDate")} (Birth Date)</label>
+                      <label className="block text-xs font-semibold text-slate-500 mb-1">
+                        {t("birthDate")} (Birth Date) {renderCitationBadges("birthDate")}
+                      </label>
                       <input
                         type="text"
                         value={birthDate}
@@ -687,7 +790,9 @@ export default function PersonDetails({ params }: { params: Promise<{ id: string
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-semibold text-slate-500 mb-1">{t("deathDate")} (Death Date)</label>
+                      <label className="block text-xs font-semibold text-slate-500 mb-1">
+                        {t("deathDate")} (Death Date) {renderCitationBadges("deathDate")}
+                      </label>
                       <input
                         type="text"
                         value={deathDate}
@@ -715,7 +820,9 @@ export default function PersonDetails({ params }: { params: Promise<{ id: string
 
                   <div className="grid grid-cols-1 gap-4">
                     <div>
-                      <label className="block text-xs font-semibold text-slate-500 mb-1">{t("biographyLabel")}</label>
+                      <label className="block text-xs font-semibold text-slate-500 mb-1">
+                        {t("biographyLabel")} {renderCitationBadges("biography")}
+                      </label>
                       <textarea
                         rows={4}
                         value={biography}
@@ -724,7 +831,9 @@ export default function PersonDetails({ params }: { params: Promise<{ id: string
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-semibold text-slate-500 mb-1">{t("notesLabel")}</label>
+                      <label className="block text-xs font-semibold text-slate-500 mb-1">
+                        {t("notesLabel")} {renderCitationBadges("notes")}
+                      </label>
                       <textarea
                         rows={2}
                         value={notes}
@@ -745,7 +854,9 @@ export default function PersonDetails({ params }: { params: Promise<{ id: string
                 <form onSubmit={handleUpdatePerson} className="space-y-4">
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-xs font-semibold text-slate-500 mb-1">{t("genealogicalName")} (谱名)</label>
+                      <label className="block text-xs font-semibold text-slate-500 mb-1">
+                        {t("genealogicalName")} (谱名) {renderCitationBadges("genealogicalName")}
+                      </label>
                       <input
                         type="text"
                         value={genealogicalName}
@@ -754,7 +865,9 @@ export default function PersonDetails({ params }: { params: Promise<{ id: string
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-semibold text-slate-500 mb-1">{t("courtesyName")} (字)</label>
+                      <label className="block text-xs font-semibold text-slate-500 mb-1">
+                        {t("courtesyName")} (字) {renderCitationBadges("courtesyName")}
+                      </label>
                       <input
                         type="text"
                         value={courtesyName}
@@ -766,7 +879,9 @@ export default function PersonDetails({ params }: { params: Promise<{ id: string
 
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-xs font-semibold text-slate-500 mb-1">{t("artName")} (号)</label>
+                      <label className="block text-xs font-semibold text-slate-500 mb-1">
+                        {t("artName")} (号) {renderCitationBadges("artName")}
+                      </label>
                       <input
                         type="text"
                         value={artName}
@@ -775,7 +890,9 @@ export default function PersonDetails({ params }: { params: Promise<{ id: string
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-semibold text-slate-500 mb-1">{t("tabooName")} (讳)</label>
+                      <label className="block text-xs font-semibold text-slate-500 mb-1">
+                        {t("tabooName")} (讳) {renderCitationBadges("tabooName")}
+                      </label>
                       <input
                         type="text"
                         value={tabooName}
@@ -787,7 +904,9 @@ export default function PersonDetails({ params }: { params: Promise<{ id: string
 
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-xs font-semibold text-slate-500 mb-1">{t("posthumousName")} (谥号)</label>
+                      <label className="block text-xs font-semibold text-slate-500 mb-1">
+                        {t("posthumousName")} (谥号) {renderCitationBadges("posthumousName")}
+                      </label>
                       <input
                         type="text"
                         value={posthumousName}
@@ -796,7 +915,9 @@ export default function PersonDetails({ params }: { params: Promise<{ id: string
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-semibold text-slate-500 mb-1">{t("childhoodName")} (小名)</label>
+                      <label className="block text-xs font-semibold text-slate-500 mb-1">
+                        {t("childhoodName")} (小名) {renderCitationBadges("childhoodName")}
+                      </label>
                       <input
                         type="text"
                         value={childhoodName}
@@ -808,7 +929,9 @@ export default function PersonDetails({ params }: { params: Promise<{ id: string
 
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-xs font-semibold text-slate-500 mb-1">{t("originalSurname")} (本姓)</label>
+                      <label className="block text-xs font-semibold text-slate-500 mb-1">
+                        {t("originalSurname")} (本姓) {renderCitationBadges("originalSurname")}
+                      </label>
                       <input
                         type="text"
                         value={originalSurname}
@@ -817,7 +940,9 @@ export default function PersonDetails({ params }: { params: Promise<{ id: string
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-semibold text-slate-500 mb-1">{t("adoptedSurname")} (嗣姓)</label>
+                      <label className="block text-xs font-semibold text-slate-500 mb-1">
+                        {t("adoptedSurname")} (嗣姓) {renderCitationBadges("adoptedSurname")}
+                      </label>
                       <input
                         type="text"
                         value={adoptedSurname}
@@ -1321,6 +1446,215 @@ export default function PersonDetails({ params }: { params: Promise<{ id: string
         </div>
 
       </div>
+
+      {/* FOOTNOTES & CITATIONS CARD (V1.7) */}
+      <div className="bg-[#faf8f5]/85 border border-amber-900/10 rounded-2xl shadow-sm p-6 space-y-6 mt-8 relative overflow-hidden font-serif">
+        <div className="absolute inset-2 border border-dashed border-amber-900/10 pointer-events-none rounded-xl"></div>
+        
+        <div className="relative z-10 flex justify-between items-center border-b border-amber-900/15 pb-4">
+          <div>
+            <h3 className="text-lg font-bold text-amber-900 flex items-center gap-2">
+              📜 文献考证与佐证 (Footnotes & Citations)
+            </h3>
+            <p className="text-[10px] text-slate-500 font-sans mt-0.5">
+              记录宗谱字段的考证来源及文字证据，支持可信度评级与佐证溯源
+            </p>
+          </div>
+          <button
+            onClick={() => setIsAddingClaim(true)}
+            className="bg-amber-800 hover:bg-amber-900 text-white font-bold px-4 py-2 rounded-xl text-xs shadow-md transition-all flex items-center gap-1.5"
+          >
+            <span>➕</span>
+            <span>添加考证</span>
+          </button>
+        </div>
+
+        {/* Claim Modal Form */}
+        {isAddingClaim && (
+          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fadeIn font-sans">
+            <div className="bg-white rounded-2xl shadow-xl border border-slate-200 w-full max-w-lg overflow-hidden">
+              <div className="bg-slate-900 text-white p-5 flex justify-between items-center">
+                <h4 className="font-bold text-sm">📜 新增佐证考证 (Add Citation)</h4>
+                <button onClick={() => setIsAddingClaim(false)} className="text-slate-400 hover:text-white transition-colors">✕</button>
+              </div>
+              <form onSubmit={handleAddClaim} className="p-6 space-y-4 text-slate-800">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">考证字段 (Predicate) *</label>
+                    <select
+                      value={newClaimPredicate}
+                      onChange={(e) => setNewClaimPredicate(e.target.value)}
+                      className="w-full border border-slate-200 rounded-lg p-2 text-xs focus:ring-1 focus:ring-amber-500 focus:outline-none bg-white text-slate-850"
+                    >
+                      <option value="surname">{t("surname")} (姓)</option>
+                      <option value="givenName">{t("givenName")} (名)</option>
+                      <option value="sex">{t("gender")} (性别)</option>
+                      <option value="birthDate">{t("birthDate")} (出生日期)</option>
+                      <option value="deathDate">{t("deathDate")} (逝世日期)</option>
+                      <option value="courtesyName">{t("courtesyName")} (字)</option>
+                      <option value="artName">{t("artName")} (号)</option>
+                      <option value="tabooName">{t("tabooName")} (讳)</option>
+                      <option value="posthumousName">{t("posthumousName")} (谥号)</option>
+                      <option value="childhoodName">{t("childhoodName")} (小名)</option>
+                      <option value="genealogicalName">{t("genealogicalName")} (谱名)</option>
+                      <option value="originalSurname">{t("originalSurname")} (本姓)</option>
+                      <option value="adoptedSurname">{t("adoptedSurname")} (嗣姓)</option>
+                      <option value="biography">{t("biographyLabel")} (生平/传记)</option>
+                      <option value="notes">{t("notesLabel")} (备注/行状)</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">可靠性 rating *</label>
+                    <select
+                      value={newClaimConfidence}
+                      onChange={(e) => setNewClaimConfidence(e.target.value)}
+                      className="w-full border border-slate-200 rounded-lg p-2 text-xs focus:ring-1 focus:ring-amber-500 focus:outline-none bg-white text-slate-850"
+                    >
+                      <option value="HIGH">🟢 HIGH (极高/如墓志铭或一手宗谱)</option>
+                      <option value="MEDIUM">🟡 MEDIUM (中等/如口述历史或侧面史料)</option>
+                      <option value="LOW">🔴 LOW (偏低/如推测或疑点佐证)</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase mb-1">关联文献来源 *</label>
+                  <select
+                    value={newClaimSourceId}
+                    onChange={(e) => setNewClaimSourceId(e.target.value)}
+                    className="w-full border border-slate-200 rounded-lg p-2 text-xs focus:ring-1 focus:ring-amber-500 focus:outline-none bg-white text-slate-850"
+                  >
+                    {sources.length === 0 ? (
+                      <option value="">-- 请先在项目详情页注册参考文献 --</option>
+                    ) : (
+                      sources.map((s) => (
+                        <option key={s.id} value={s.id}>
+                          📜 [{s.sourceType}] {s.title} ({s.dynasty || "近代"})
+                        </option>
+                      ))
+                    )}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase mb-1">原始文献引用 (Verbatim Excerpt / Quote)</label>
+                  <textarea
+                    value={newClaimQuote}
+                    onChange={(e) => setNewClaimQuote(e.target.value)}
+                    rows={3}
+                    placeholder="例：行状载：公生于清康熙壬子年，性温敏…"
+                    className="w-full border border-slate-200 rounded-lg p-2 text-xs focus:ring-1 focus:ring-amber-500 focus:outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase mb-1">现代考证阐释 (Modern Commentary / Interpretation)</label>
+                  <textarea
+                    value={newClaimInterpretation}
+                    onChange={(e) => setNewClaimInterpretation(e.target.value)}
+                    rows={2}
+                    placeholder="例：康熙壬子年即康熙十一年（1672年），与口传谱载相符…"
+                    className="w-full border border-slate-200 rounded-lg p-2 text-xs focus:ring-1 focus:ring-amber-500 focus:outline-none"
+                  />
+                </div>
+
+                <div className="flex justify-end gap-2 border-t border-slate-100 pt-4 mt-2">
+                  <button
+                    type="button"
+                    onClick={() => setIsAddingClaim(false)}
+                    className="bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2 rounded-lg font-bold text-xs transition-colors"
+                  >
+                    {t("cancel")}
+                  </button>
+                  <button
+                    type="submit"
+                    className="bg-amber-800 hover:bg-amber-900 text-white px-4 py-2 rounded-lg font-bold text-xs shadow-md transition-colors"
+                  >
+                    保存佐证
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* Citations List */}
+        {claims.length === 0 ? (
+          <div className="text-center py-10 text-slate-400">
+            <span className="text-3xl block mb-2">📜</span>
+            <p className="font-bold text-sm">暂无学术文献考证</p>
+            <p className="text-xs mt-1">点击右上角，将宗谱记载、墓志铭、碑刻原文录入作为考证根据。</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto relative z-10">
+            <table className="w-full text-left text-xs font-serif border-collapse">
+              <thead>
+                <tr className="border-b border-amber-900/15 text-slate-500 uppercase tracking-wider font-bold">
+                  <th className="py-3 px-2 w-12 text-center">序号</th>
+                  <th className="py-3 px-2 w-28">考证字段</th>
+                  <th className="py-3 px-2 w-44">关联文献</th>
+                  <th className="py-3 px-2">文献引文 (Verbatim Quote)</th>
+                  <th className="py-3 px-2">考证阐释 (Interpretation)</th>
+                  <th className="py-3 px-2 w-20 text-center">可信度</th>
+                  <th className="py-3 px-2 w-16 text-center">操作</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-amber-900/10">
+                {claims.map((c, i) => {
+                  const src = sources.find((s) => s.id === c.sourceId);
+                  return (
+                    <tr key={c.id} id={`citation-${c.id}`} className="hover:bg-amber-50/40 transition-colors">
+                      <td className="py-4 px-2 text-center font-bold text-amber-800 font-mono">
+                        [{i + 1}]
+                      </td>
+                      <td className="py-4 px-2 font-bold text-slate-900">
+                        {t(c.predicate) || c.predicate}
+                      </td>
+                      <td className="py-4 px-2">
+                        {src ? (
+                          <div>
+                            <span className="font-semibold text-slate-800">{src.title}</span>
+                            <div className="text-[10px] text-slate-450 font-sans mt-0.5">
+                              {src.dynasty} · {src.author || "佚名"} ({src.volume || "全"})
+                            </div>
+                          </div>
+                        ) : (
+                          <span className="text-slate-400 italic">未知文献</span>
+                        )}
+                      </td>
+                      <td className="py-4 px-2 text-slate-700 italic font-medium leading-relaxed">
+                        {c.quote ? `“${c.quote}”` : <span className="text-slate-400 italic font-normal">无引用原文</span>}
+                      </td>
+                      <td className="py-4 px-2 text-slate-650 leading-relaxed">
+                        {c.interpretation || <span className="text-slate-400 italic">无额外考释</span>}
+                      </td>
+                      <td className="py-4 px-2 text-center">
+                        {c.confidence === "HIGH" ? (
+                          <span className="bg-emerald-50 text-emerald-800 border border-emerald-250 px-2 py-0.5 rounded font-sans font-bold text-[9px]">高</span>
+                        ) : c.confidence === "MEDIUM" ? (
+                          <span className="bg-amber-50 text-amber-800 border border-amber-250 px-2 py-0.5 rounded font-sans font-bold text-[9px]">中</span>
+                        ) : (
+                          <span className="bg-rose-50 text-rose-800 border border-rose-250 px-2 py-0.5 rounded font-sans font-bold text-[9px]">低</span>
+                        )}
+                      </td>
+                      <td className="py-4 px-2 text-center">
+                        <button
+                          onClick={() => handleDeleteClaim(c.id)}
+                          className="text-[10px] font-bold text-rose-600 hover:text-rose-850 hover:underline"
+                        >
+                          删除
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
     </div>
   );
 }
