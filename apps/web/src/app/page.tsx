@@ -1,19 +1,48 @@
 "use client";
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { apiFetch } from "@/lib/api";
+import { apiFetch, setAuthSession } from "@/lib/api";
 
 export default function Home() {
   const [projects, setProjects] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState("");
   const [isCreating, setIsCreating] = useState(false);
   const [newProjectName, setNewProjectName] = useState("");
   const [newProjectDesc, setNewProjectDesc] = useState("");
 
-  const fetchProjects = () => {
-    apiFetch("/projects")
-      .then((res) => res.json())
-      .then((data) => setProjects(data))
-      .catch((err) => console.error("Error fetching projects:", err));
+  const loginAsDemoGuest = async () => {
+    const res = await apiFetch("/auth/login", {
+      method: "POST",
+      body: JSON.stringify({ username: "guest", password: "editor123" }),
+    });
+    if (!res.ok) {
+      throw new Error("Demo login failed");
+    }
+    setAuthSession(await res.json());
+  };
+
+  const fetchProjects = async () => {
+    setIsLoading(true);
+    setError("");
+    try {
+      let res = await apiFetch("/projects", { skipAuthRedirect: true });
+      if (res.status === 401) {
+        await loginAsDemoGuest();
+        res = await apiFetch("/projects", { skipAuthRedirect: true });
+      }
+      if (!res.ok) {
+        throw new Error(`Failed to fetch projects: ${res.status}`);
+      }
+      const data = await res.json();
+      setProjects(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.error("Error fetching projects:", err);
+      setError("Could not load demo projects. Please try signing in again.");
+      setProjects([]);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -81,7 +110,15 @@ export default function Home() {
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {projects.length === 0 ? (
+        {isLoading ? (
+          <div className="col-span-full text-center py-12 text-slate-500 bg-white rounded-lg border border-slate-200">
+            Loading demo projects...
+          </div>
+        ) : error ? (
+          <div className="col-span-full text-center py-12 text-red-600 bg-white rounded-lg border border-red-200">
+            {error}
+          </div>
+        ) : projects.length === 0 ? (
           <div className="col-span-full text-center py-12 text-slate-500 bg-white rounded-lg border border-slate-200 border-dashed">
             No projects found. Create one to get started.
           </div>

@@ -11,15 +11,59 @@ const getApiUrl = () => {
   return 'http://localhost:3001/api';
 };
 
-export const apiFetch = async (path: string, options: RequestInit = {}) => {
-  const headers = {
-    'Content-Type': 'application/json',
-    ...options.headers,
-  };
+type ApiFetchOptions = RequestInit & {
+  skipAuthRedirect?: boolean;
+};
+
+export const setAuthSession = (data: any) => {
+  if (typeof window === 'undefined') {
+    return;
+  }
+
+  if (data?.access_token) {
+    localStorage.setItem('access_token', data.access_token);
+  }
+  if (data?.refresh_token) {
+    localStorage.setItem('refresh_token', data.refresh_token);
+  }
+  if (data?.user) {
+    localStorage.setItem('user', JSON.stringify(data.user));
+  }
+};
+
+export const clearAuthSession = () => {
+  if (typeof window === 'undefined') {
+    return;
+  }
+
+  localStorage.removeItem('access_token');
+  localStorage.removeItem('refresh_token');
+  localStorage.removeItem('user');
+};
+
+const authHeader = () => {
+  if (typeof window === 'undefined') {
+    return null;
+  }
+
+  const token = localStorage.getItem('access_token');
+  return token ? `Bearer ${token}` : null;
+};
+
+export const apiFetch = async (path: string, options: ApiFetchOptions = {}) => {
+  const { skipAuthRedirect, ...fetchOptions } = options;
+  const headers = new Headers(fetchOptions.headers);
+  if (!headers.has('Content-Type')) {
+    headers.set('Content-Type', 'application/json');
+  }
+  const token = authHeader();
+  if (token) {
+    headers.set('Authorization', token);
+  }
   
   let res = await fetch(`${getApiUrl()}${path}`, {
     credentials: 'include',
-    ...options,
+    ...fetchOptions,
     headers,
   });
   
@@ -36,19 +80,31 @@ export const apiFetch = async (path: string, options: RequestInit = {}) => {
         credentials: 'include',
       });
       if (refreshRes.ok) {
+        setAuthSession(await refreshRes.json());
         // Retry original request on successful token rotation
         res = await fetch(`${getApiUrl()}${path}`, {
           credentials: 'include',
-          ...options,
-          headers,
+          ...fetchOptions,
+          headers: (() => {
+            const retryHeaders = new Headers(headers);
+            const retryToken = authHeader();
+            if (retryToken) {
+              retryHeaders.set('Authorization', retryToken);
+            }
+            return retryHeaders;
+          })(),
         });
       } else {
-        localStorage.removeItem('user');
-        window.location.href = '/login';
+        clearAuthSession();
+        if (!skipAuthRedirect) {
+          window.location.href = '/login';
+        }
       }
     } catch (err) {
-      localStorage.removeItem('user');
-      window.location.href = '/login';
+      clearAuthSession();
+      if (!skipAuthRedirect) {
+        window.location.href = '/login';
+      }
     }
   }
   return res;
