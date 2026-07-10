@@ -1,21 +1,40 @@
 "use client";
-import { useEffect, useState, use } from "react";
+import { useEffect, useState, use, Suspense } from "react";
 import Link from "next/link";
+import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { apiFetch } from "@/lib/api";
 import { useLanguage } from "@/components/LanguageContext";
 import MigrationMap from "@/components/MigrationMap";
 
-export default function ProjectDetails({ params }: { params: Promise<{ id: string }> }) {
+function ProjectDetailsContent({ params }: { params: Promise<{ id: string }> }) {
   const unwrappedParams = use(params);
   const { t, language } = useLanguage();
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
+
   const [project, setProject] = useState<any>(null);
   const [persons, setPersons] = useState<any[]>([]);
   const [relations, setRelations] = useState<any[]>([]);
   const [members, setMembers] = useState<any[]>([]);
   const [currentUser, setCurrentUser] = useState<any>(null);
 
-  // Active Tab state: 'list', 'tree', 'members', 'tools'
-  const [activeTab, setActiveTab] = useState("list");
+  // Active Tab state synced with URL search params
+  const urlTab = searchParams?.get("tab") || "list";
+  const [activeTab, setActiveTabState] = useState(urlTab);
+
+  useEffect(() => {
+    if (urlTab !== activeTab) {
+      setActiveTabState(urlTab);
+    }
+  }, [urlTab, activeTab]);
+
+  const setActiveTab = (newTab: string) => {
+    setActiveTabState(newTab);
+    const urlParams = new URLSearchParams(window.location.search);
+    urlParams.set("tab", newTab);
+    router.push(`${pathname}?${urlParams.toString()}`);
+  };
 
   // Tree Tab Substate: 'descendant', 'ancestry', 'table'
   const [treeSubTab, setTreeSubTab] = useState("descendant");
@@ -71,7 +90,13 @@ export default function ProjectDetails({ params }: { params: Promise<{ id: strin
   const fetchProjectData = () => {
     apiFetch(`/projects/${unwrappedParams.id}`)
       .then((res) => res.json())
-      .then((data) => setProject(data))
+      .then((data) => {
+        setProject(data);
+        if (data && data.name) {
+          localStorage.setItem("active_project_name", data.name);
+          window.dispatchEvent(new CustomEvent("openzupu-project-active", { detail: data.name }));
+        }
+      })
       .catch((err) => console.error("Error fetching project:", err));
 
     apiFetch(`/persons?projectId=${unwrappedParams.id}`)
@@ -709,39 +734,43 @@ export default function ProjectDetails({ params }: { params: Promise<{ id: strin
     }
 
     return (
-      <div className="flex flex-row-reverse overflow-x-auto gap-4 p-8 bg-[#fdfaf2] border border-amber-200/40 rounded-lg min-h-[500px] font-serif shadow-inner select-none print:bg-white print:border-none print:shadow-none">
+      <div className="flex flex-row-reverse overflow-x-auto gap-6 p-8 bg-[#fdfaf2] border border-amber-200/40 rounded-lg min-h-[550px] font-serif shadow-inner select-none print:bg-white print:border-none print:shadow-none print:p-0">
         {branchPersons.map(({ person, generation }) => {
           const { father, mother } = getParents(person.id);
           const spouses = getSpouses(person.id);
           const children = getChildren(person.id);
 
           return (
-            <div key={person.id} className="flex-none w-32 border-x border-red-700/30 px-3 flex flex-col justify-between min-h-[400px] relative bg-[#fdfbf6] py-4 print:border-red-600/50" style={{ writingMode: "vertical-rl" }}>
+            <div 
+              key={person.id} 
+              className="flex-none min-w-[160px] max-w-[400px] border-x-2 border-red-700/30 px-4 flex flex-col justify-between min-h-[480px] relative bg-[#fdfbf6] py-5 shadow-sm hover:shadow-md transition-shadow print:border-red-600/50 print:shadow-none print:bg-white" 
+              style={{ writingMode: "vertical-rl" }}
+            >
               {/* Top: Gen and Name */}
               <div className="space-y-4">
-                <div className="flex items-center gap-1.5 border-b border-red-100 pb-2 mb-2 w-full">
-                  <span className="text-[10px] bg-red-100 text-red-800 px-1 py-0.5 rounded font-sans font-bold" style={{ writingMode: "horizontal-tb" }}>
+                <div className="flex items-center gap-2 border-b border-red-100 pb-3 mb-3 w-full">
+                  <span className="text-[10px] bg-red-100 text-red-800 px-2 py-0.5 rounded font-sans font-bold tracking-widest" style={{ writingMode: "horizontal-tb" }}>
                     第 {generation} 世
                   </span>
                   {person.avatarUrl && (
-                    <img src={person.avatarUrl} alt="" className="w-8 h-8 rounded-full border border-red-300 object-cover mt-2" style={{ writingMode: "horizontal-tb" }} />
+                    <img src={person.avatarUrl} alt="" className="w-9 h-9 rounded-full border border-red-300 object-cover mt-2" style={{ writingMode: "horizontal-tb" }} />
                   )}
                 </div>
                 
-                <div className="text-lg font-bold text-red-900 tracking-wider">
+                <div className="text-xl font-bold text-red-900 tracking-widest mb-2">
                   {person.surname}{person.givenName}
                 </div>
 
                 {/* Courtesy / posthumous name details */}
-                <div className="text-[11px] text-slate-600 space-y-1 mt-2">
-                  {person.courtesyName && <div>字{person.courtesyName}</div>}
-                  {person.artName && <div>号{person.artName}</div>}
-                  {person.posthumousName && <div>谥{person.posthumousName}</div>}
+                <div className="text-[11px] text-slate-600 space-y-1.5 mt-2 leading-relaxed">
+                  {person.courtesyName && <div>字：{person.courtesyName}</div>}
+                  {person.artName && <div>号：{person.artName}</div>}
+                  {person.posthumousName && <div>谥：{person.posthumousName}</div>}
                   {person.rankInSiblings && <div>排行：{person.rankInSiblings}</div>}
                 </div>
 
                 {/* Relational parents */}
-                <div className="text-xs text-slate-700 font-medium space-y-1 mt-4">
+                <div className="text-xs text-slate-700 font-medium space-y-1.5 mt-4 leading-relaxed border-t border-red-100/50 pt-2">
                   {father && <div>父系：{father.surname}{father.givenName}</div>}
                   {mother && <div>母系：{mother.surname}{mother.givenName}</div>}
                   {spouses.length > 0 && (
@@ -753,7 +782,7 @@ export default function ProjectDetails({ params }: { params: Promise<{ id: strin
                 </div>
 
                 {/* Life history details */}
-                <div className="text-[11px] text-slate-800 leading-loose mt-4 border-t border-red-50/50 pt-2 h-44 overflow-y-auto pr-1">
+                <div className="text-[11px] text-slate-800 leading-loose mt-4 border-t border-red-100/50 pt-3">
                   {person.biography || "生卒考证不详。"}
                   {children.length > 0 && (
                     <div className="mt-3 text-red-800/80">
@@ -765,7 +794,7 @@ export default function ProjectDetails({ params }: { params: Promise<{ id: strin
               </div>
 
               {/* Bottom footer index */}
-              <div className="text-[9px] text-slate-400 font-mono self-start border-t border-slate-100 w-full pt-1">
+              <div className="text-[9px] text-slate-400 font-mono self-start border-t border-slate-100 w-full pt-2 mt-4">
                 ID: {person.id.substring(0, 8)}
               </div>
             </div>
@@ -1166,6 +1195,7 @@ export default function ProjectDetails({ params }: { params: Promise<{ id: strin
 
   const getMigrationTimeline = () => {
     const events: any[] = [];
+    const isZh = language === "zh";
     persons.forEach((p) => {
       const name = `${p.surname || ""}${p.givenName || ""}`;
       const genNum = p.generationNumber || 1;
@@ -1177,10 +1207,10 @@ export default function ProjectDetails({ params }: { params: Promise<{ id: strin
           name,
           genNum,
           type: "birth",
-          label: "Birth & Nesting (出生落户)",
+          label: isZh ? "出生落户" : "Birth & Nesting",
           place: p.birthPlace,
           year: birthYear,
-          dateDesc: p.birthDate || "Date Unknown"
+          dateDesc: p.birthDate || (isZh ? "生平日期不详" : "Date Unknown")
         });
       }
       if (p.deathPlace) {
@@ -1190,10 +1220,10 @@ export default function ProjectDetails({ params }: { params: Promise<{ id: strin
           name,
           genNum,
           type: "death",
-          label: "Decease (寿终过世)",
+          label: isZh ? "寿终安葬" : "Decease",
           place: p.deathPlace,
           year: deathYear,
-          dateDesc: p.deathDate || "Date Unknown"
+          dateDesc: p.deathDate || (isZh ? "生平日期不详" : "Date Unknown")
         });
       }
     });
@@ -1208,12 +1238,17 @@ export default function ProjectDetails({ params }: { params: Promise<{ id: strin
 
   const renderMigrationTab = () => {
     const timeline = getMigrationTimeline();
+    const isZh = language === "zh";
     if (timeline.length === 0) {
       return (
         <div className="text-center py-16 text-slate-400 bg-white border border-slate-100 rounded-2xl shadow-sm">
           <span className="text-4xl block mb-2">🗺️</span>
-          <p className="font-bold text-slate-600">No Place Events Registered</p>
-          <p className="text-xs mt-1">Add birth places or death places to family members to trace migrations.</p>
+          <p className="font-bold text-slate-600">
+            {isZh ? "无已登记的地理位置事件" : "No Place Events Registered"}
+          </p>
+          <p className="text-xs mt-1">
+            {isZh ? "为宗亲添加“出生地”或“安葬常住地”以生成轨迹时空轴。" : "Add birth places or death places to family members to trace migrations."}
+          </p>
         </div>
       );
     }
@@ -1221,8 +1256,12 @@ export default function ProjectDetails({ params }: { params: Promise<{ id: strin
     return (
       <div className="bg-white border border-slate-100 rounded-2xl p-6 shadow-sm animate-fadeIn">
         <div className="border-b border-slate-100 pb-3 mb-6">
-          <h4 className="text-lg font-bold text-slate-800">🗺️ Clan Migration & Geolocation Timeline</h4>
-          <p className="text-xs text-slate-400 mt-1">Chronological record of family migration points parsed across generations.</p>
+          <h4 className="text-lg font-bold text-slate-800">
+            {isZh ? "🗺️ 宗族时空迁徙地缘轨迹轴" : "🗺️ Clan Migration & Geolocation Timeline"}
+          </h4>
+          <p className="text-xs text-slate-400 mt-1">
+            {isZh ? "按代际时间先后顺序排列展示先祖及家族成员生平足迹迁徙轨迹。" : "Chronological record of family migration points parsed across generations."}
+          </p>
         </div>
         <div className="relative border-l border-slate-200 ml-4 pl-6 space-y-8 py-2">
           {timeline.map((evt, idx) => {
@@ -1235,7 +1274,7 @@ export default function ProjectDetails({ params }: { params: Promise<{ id: strin
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                   <div>
                     <span className="text-xs font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded border border-amber-100">
-                      Gen {evt.genNum} &bull; {evt.year ? `${evt.year} AD` : "Year Unknown"}
+                      {isZh ? `第 ${evt.genNum} 世` : `Gen ${evt.genNum}`} &bull; {evt.year ? `${evt.year} ${isZh ? "年" : "AD"}` : (isZh ? "生卒年份详考" : "Year Unknown")}
                     </span>
                     <h5 className="font-serif font-extrabold text-slate-900 text-base mt-2 flex items-center gap-2">
                       <Link href={`/projects/${project.id}/persons/${evt.person.id}`} className="hover:underline text-slate-900 hover:text-amber-800 transition-colors">
@@ -1250,7 +1289,9 @@ export default function ProjectDetails({ params }: { params: Promise<{ id: strin
                     </span>
                   </div>
                 </div>
-                <p className="text-xs text-slate-400 mt-1 font-mono">Date detail: {evt.dateDesc}</p>
+                <p className="text-xs text-slate-400 mt-1 font-mono">
+                  {isZh ? "生卒记述：" : "Date detail: "} {evt.dateDesc}
+                </p>
               </div>
             );
           })}
@@ -2048,7 +2089,7 @@ export default function ProjectDetails({ params }: { params: Promise<{ id: strin
                       }
                     `}} />
                     <h4 className="text-sm font-semibold text-red-800 uppercase tracking-wider mb-2 print:hidden">📜 欧式房志世系记 (Ou-Style Vertical Pedigree Text Registry)</h4>
-                    <div className="p-0 border border-red-200/50 rounded-lg overflow-hidden">
+                    <div id="print-pedigree-container" className="p-0 border border-red-200/50 rounded-lg overflow-hidden">
                       {renderVerticalRegistry()}
                     </div>
                   </div>
@@ -2578,4 +2619,12 @@ export default function ProjectDetails({ params }: { params: Promise<{ id: strin
     setValidationResults(anomalies);
     setIsValidating(false);
   };
+}
+
+export default function ProjectDetails(props: { params: Promise<{ id: string }> }) {
+  return (
+    <Suspense fallback={<div className="p-8 text-center text-slate-500 font-serif">加载中... / Loading...</div>}>
+      <ProjectDetailsContent {...props} />
+    </Suspense>
+  );
 }
