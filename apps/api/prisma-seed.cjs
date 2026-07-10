@@ -101,16 +101,16 @@ async function main() {
 
   // --- SEED PLACES ---
   const placeNanjing = await prisma.place.create({
-    data: { name: '南京', fullName: '江苏省江宁府上元县', placeType: 'CITY', historicalName: '江宁/应天府', currentName: '南京' }
+    data: { name: '南京', fullName: '江苏省江宁府上元县', placeType: 'CITY', historicalName: '江宁/应天府', currentName: '南京', latitude: 32.0603, longitude: 118.7969 }
   });
   const placeSuzhou = await prisma.place.create({
-    data: { name: '苏州', fullName: '江苏省苏州府吴县', placeType: 'CITY', historicalName: '平江府', currentName: '苏州' }
+    data: { name: '苏州', fullName: '江苏省苏州府吴县', placeType: 'CITY', historicalName: '平江府', currentName: '苏州', latitude: 31.2990, longitude: 120.5853 }
   });
   const placeShanghai = await prisma.place.create({
-    data: { name: '上海', fullName: '江苏省松江府上海县', placeType: 'CITY', historicalName: '华亭县', currentName: '上海' }
+    data: { name: '上海', fullName: '江苏省松江府上海县', placeType: 'CITY', historicalName: '华亭县', currentName: '上海', latitude: 31.2304, longitude: 121.4737 }
   });
   const placeNanchang = await prisma.place.create({
-    data: { name: '南昌', fullName: '江西省南昌府南昌县', placeType: 'CITY', historicalName: '豫章', currentName: '南昌' }
+    data: { name: '南昌', fullName: '江西省南昌府南昌县', placeType: 'CITY', historicalName: '豫章', currentName: '南昌', latitude: 28.6820, longitude: 115.8579 }
   });
 
   // ==========================================

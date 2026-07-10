@@ -94,6 +94,27 @@ If you have photos of scanned traditional Chinese books, you can use the built-i
 2.  The background processor will extract Simplified and Traditional Chinese characters.
 3.  Copy and paste the output text directly into biography notes, saving hours of manual typing.
 
+### Generation Poem & Smart Validator (V1.8)
+To ensure the logical consistency and data integrity of your family trees, OpenZupu provides generation poem parsing and smart logical audits:
+1.  **Parse Generation Poem**:
+    *   Navigate to the **"Generation Poem"** tab in the project details.
+    *   Type or paste the poem (e.g. `守 浩 绍 中 德 承 先 启 后 贤`), click **"Generate/Update Generations"**, and the system will automatically extract and assign characters to successive generations.
+2.  **Run Smart Validation**:
+    *   Click **"Smart Scan"**. The validator will analyze the database and report warnings:
+      *   *Character Mismatch*: Flags individuals whose names or generation characters don't match the poem expected character for their generation number.
+      *   *Sibling Inconsistency*: Flags sibling groups who have different generation numbers or generation characters.
+      *   *Generation Gaps*: Detects child-parent generation steps that are not equal to 1.
+
+### 🗺️ Interactive Leaflet Migration Map (V1.9)
+OpenZupu plots geographic events on a retro sepia-filtered interactive map:
+1.  **Open the Map**:
+    *   Click the **"Migration Map"** tab to view the map viewport.
+2.  **Interactive Markers & Pathways**:
+    *   Circle markers represent historical locations; larger markers indicate higher frequency of birth or residence events.
+    *   Dotted vector flowlines connect birthplace and residence coordinates for each person (blue lines for males, pink for females) showing generation-over-generation movements.
+3.  **Advanced Filters**:
+    *   Filter pathways by specific branches or search for an individual's name to trace their personal migration journey.
+
 ---
 
 ## 5. Data Layout: Pedigrees & Printing

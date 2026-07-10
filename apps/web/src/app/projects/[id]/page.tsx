@@ -3,6 +3,7 @@ import { useEffect, useState, use } from "react";
 import Link from "next/link";
 import { apiFetch } from "@/lib/api";
 import { useLanguage } from "@/components/LanguageContext";
+import MigrationMap from "@/components/MigrationMap";
 
 export default function ProjectDetails({ params }: { params: Promise<{ id: string }> }) {
   const unwrappedParams = use(params);
@@ -59,6 +60,14 @@ export default function ProjectDetails({ params }: { params: Promise<{ id: strin
   const [newSourceUrl, setNewSourceUrl] = useState("");
   const [newSourceNotes, setNewSourceNotes] = useState("");
 
+  // V1.8 & V1.9 states
+  const [generations, setGenerations] = useState<any[]>([]);
+  const [branches, setBranches] = useState<any[]>([]);
+  const [places, setPlaces] = useState<any[]>([]);
+  const [poemInput, setPoemInput] = useState("");
+  const [validationResults, setValidationResults] = useState<any[]>([]);
+  const [isValidating, setIsValidating] = useState(false);
+
   const fetchProjectData = () => {
     apiFetch(`/projects/${unwrappedParams.id}`)
       .then((res) => res.json())
@@ -90,6 +99,27 @@ export default function ProjectDetails({ params }: { params: Promise<{ id: strin
       .then((res) => res.json())
       .then((data) => setSources(Array.isArray(data) ? data : []))
       .catch((err) => console.error("Error fetching sources:", err));
+
+    apiFetch(`/generations?projectId=${unwrappedParams.id}`)
+      .then((res) => res.json())
+      .then((data) => {
+        const arr = Array.isArray(data) ? data : [];
+        setGenerations(arr);
+        // Pre-fill poem input with the poem of the first generation record if found
+        const firstPoem = arr.find((g) => g.poem)?.poem;
+        if (firstPoem) setPoemInput(firstPoem);
+      })
+      .catch((err) => console.error("Error fetching generations:", err));
+
+    apiFetch(`/branches?projectId=${unwrappedParams.id}`)
+      .then((res) => res.json())
+      .then((data) => setBranches(Array.isArray(data) ? data : []))
+      .catch((err) => console.error("Error fetching branches:", err));
+
+    apiFetch(`/places`)
+      .then((res) => res.json())
+      .then((data) => setPlaces(Array.isArray(data) ? data : []))
+      .catch((err) => console.error("Error fetching places:", err));
   };
 
   useEffect(() => {
@@ -1537,6 +1567,22 @@ export default function ProjectDetails({ params }: { params: Promise<{ id: strin
         >
           📜 {t("sourcesTitle")}
         </button>
+        <button
+          onClick={() => setActiveTab("generations")}
+          className={`py-2 px-4 rounded-lg font-bold text-sm transition-all duration-300 ${
+            activeTab === "generations" ? "bg-slate-900 text-white shadow-md" : "text-slate-600 hover:text-slate-850 hover:bg-slate-200/50"
+          }`}
+        >
+          📖 {t("generationPoemTab")}
+        </button>
+        <button
+          onClick={() => setActiveTab("map")}
+          className={`py-2 px-4 rounded-lg font-bold text-sm transition-all duration-300 ${
+            activeTab === "map" ? "bg-slate-900 text-white shadow-md" : "text-slate-600 hover:text-slate-850 hover:bg-slate-200/50"
+          }`}
+        >
+          🗺️ {t("migrationMapTab")}
+        </button>
       </div>
 
       {/* 1. PERSON LIST TAB */}
@@ -2245,6 +2291,291 @@ export default function ProjectDetails({ params }: { params: Promise<{ id: strin
 
       {/* 7. HISTORICAL SOURCES TAB */}
       {activeTab === "sources" && renderSourcesTab()}
+
+      {/* 8. GENERATION POEM & ZIP-BEI ANALYZER TAB */}
+      {activeTab === "generations" && renderGenerationPoemTab()}
+
+      {/* 9. GEOSPATIAL MIGRATION MAP TAB */}
+      {activeTab === "map" && renderMigrationMapTab()}
     </div>
   );
+
+  function renderGenerationPoemTab() {
+    return (
+      <div className="space-y-6 font-serif">
+        <div className="bg-[#faf8f5]/85 border border-amber-900/10 rounded-2xl p-6 relative overflow-hidden shadow-sm">
+          <div className="absolute inset-2 border border-dashed border-amber-900/10 pointer-events-none rounded-xl"></div>
+          
+          <div className="relative z-10 space-y-4">
+            <div className="border-b border-amber-900/15 pb-4">
+              <h3 className="text-lg font-bold text-amber-900 flex items-center gap-2">
+                📖 宗族字辈昭穆诗 (Zi-Bei Generation Poem)
+              </h3>
+              <p className="text-[10px] text-slate-500 font-sans mt-0.5">
+                字辈（又称昭穆、派语）用于规范家族世代命名。系统将根据字辈诗自动提取并推导每一代对应的辈字。
+              </p>
+            </div>
+
+            <form onSubmit={handleGenerateGenerations} className="space-y-4 font-sans text-slate-800">
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">
+                  录入字辈诗 (可使用空格或标点分隔)
+                </label>
+                <input
+                  type="text"
+                  value={poemInput}
+                  onChange={(e) => setPoemInput(e.target.value)}
+                  placeholder="例：守 浩 绍 中 德 承 先 启 后 贤"
+                  className="w-full border border-slate-200 rounded-lg p-3 text-sm focus:ring-1 focus:ring-amber-500 focus:outline-none"
+                />
+              </div>
+
+              <div className="flex gap-2">
+                <button
+                  type="submit"
+                  className="bg-amber-800 hover:bg-amber-900 text-white font-bold px-4 py-2 rounded-xl text-xs shadow-md transition-all flex items-center gap-1"
+                >
+                  ⚙️ 解析并更新世代字辈
+                </button>
+                <button
+                  type="button"
+                  onClick={handleRunValidation}
+                  className="bg-slate-900 hover:bg-slate-800 text-white font-bold px-4 py-2 rounded-xl text-xs shadow-md transition-all flex items-center gap-1"
+                >
+                  🔍 开始智能校验 (Smart Scan)
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+
+        {/* Validator Scanner Card */}
+        <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-xs font-sans text-slate-800">
+          <h4 className="font-bold text-sm text-slate-900 flex items-center gap-1.5 border-b pb-3 mb-4">
+            🛡️ 字辈与代际一致性校验结果 (Validation Log)
+          </h4>
+
+          {validationResults.length === 0 ? (
+            <div className="bg-emerald-50 border border-emerald-250 text-emerald-800 rounded-xl p-4 flex items-center gap-3">
+              <span className="text-xl">✅</span>
+              <div>
+                <p className="font-bold text-xs">校验通过</p>
+                <p className="text-[10px] text-emerald-600 mt-0.5">未检测到任何辈字脱轨、同胞世代冲突或代际断链现象。</p>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-3 max-h-[300px] overflow-y-auto">
+              <p className="text-xs text-rose-600 font-bold mb-1">⚠️ 扫描发现 {validationResults.length} 处代际或辈字异常：</p>
+              {validationResults.map((r, idx) => (
+                <div
+                  key={idx}
+                  className={`border rounded-xl p-3 text-xs flex justify-between items-start gap-4 ${
+                    r.severity === "HIGH"
+                      ? "bg-rose-50/50 border-rose-200 text-rose-900"
+                      : "bg-amber-50/50 border-amber-200 text-amber-900"
+                  }`}
+                >
+                  <div className="space-y-1">
+                    <span className={`inline-block font-mono font-bold text-[9px] px-1.5 py-0.5 rounded uppercase ${
+                      r.severity === "HIGH" ? "bg-rose-200 text-rose-800" : "bg-amber-200 text-amber-800"
+                    }`}>
+                      {r.severity}
+                    </span>
+                    <p className="font-medium mt-1">{r.message}</p>
+                    <p className="text-[10px] text-slate-500 italic">💡 解决方案: {r.fixSuggestion}</p>
+                  </div>
+                  {r.person && (
+                    <Link
+                      href={`/projects/${unwrappedParams.id}/persons/${r.person.id}`}
+                      className="bg-white border border-slate-200 hover:bg-slate-50 px-2 py-1 rounded font-bold text-[10px] text-slate-700 shadow-xs transition-colors shrink-0"
+                    >
+                      转到编辑
+                    </Link>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Generation Characters Table */}
+        {generations.length > 0 && (
+          <div className="bg-[#faf8f5]/50 border border-amber-900/10 rounded-2xl p-6 relative overflow-hidden shadow-xs">
+            <h4 className="font-bold text-sm text-amber-900 flex items-center gap-1.5 border-b border-amber-900/10 pb-3 mb-4">
+              📋 世代辈序对照表 (Generation Sequences)
+            </h4>
+            <div className="grid grid-cols-2 sm:grid-cols-5 md:grid-cols-8 gap-3">
+              {generations
+                .sort((a, b) => a.generationNumber - b.generationNumber)
+                .map((g) => (
+                  <div
+                    key={g.id}
+                    className="bg-white border border-amber-900/10 rounded-xl p-3 text-center shadow-xs flex flex-col justify-center items-center"
+                  >
+                    <span className="text-[10px] text-slate-400 font-sans">第 {g.generationNumber} 世</span>
+                    <span className="text-xl font-bold text-amber-950 font-serif mt-1">{g.character}</span>
+                  </div>
+                ))}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  function renderMigrationMapTab() {
+    return (
+      <div className="space-y-4">
+        {/* Render interactive sepia dynamic map overlay */}
+        <MigrationMap
+          persons={persons}
+          places={places}
+          branches={branches}
+        />
+      </div>
+    );
+  }
+
+  // --- Handlers for V1.8 Generation Poem ---
+  const handleGenerateGenerations = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!poemInput.trim()) return;
+    try {
+      // 1. Delete all existing generations for this project
+      for (const g of generations) {
+        await apiFetch(`/generations/${g.id}`, { method: "DELETE" });
+      }
+
+      // 2. Parse poem characters
+      const chars = poemInput.replace(/[\s,，.。;；\n]/g, "").split("");
+
+      // 3. Create generations in database
+      for (let i = 0; i < chars.length; i++) {
+        await apiFetch("/generations", {
+          method: "POST",
+          body: JSON.stringify({
+            projectId: unwrappedParams.id,
+            generationNumber: i + 1,
+            character: chars[i],
+            poem: poemInput.trim(),
+            notes: `Auto-parsed from Generation Poem`,
+          }),
+        });
+      }
+
+      // Reload
+      fetchProjectData();
+    } catch (err) {
+      console.error("Error generating generations:", err);
+    }
+  };
+
+  const handleRunValidation = () => {
+    setIsValidating(true);
+    const anomalies: any[] = [];
+
+    // 1. Character mismatches
+    persons.forEach((p) => {
+      if (p.generationNumber) {
+        const expectedGen = generations.find((g) => g.generationNumber === p.generationNumber);
+        if (expectedGen) {
+          const expectedChar = expectedGen.character;
+
+          // Check generationCharacter
+          if (p.generationCharacter && p.generationCharacter !== expectedChar) {
+            anomalies.push({
+              type: "CHARACTER_MISMATCH",
+              severity: "HIGH",
+              person: p,
+              message: `${p.surname || ""}${p.givenName || ""} (第${p.generationNumber}世) 录入的字辈字为 "${p.generationCharacter}"，但根据字辈诗，该代字辈应为 "${expectedChar}"。`,
+              fixSuggestion: `建议将字辈修改为 "${expectedChar}"`,
+            });
+          }
+
+          // Check if givenName contains or starts with expected character
+          if (p.givenName && !p.givenName.includes(expectedChar)) {
+            anomalies.push({
+              type: "GIVEN_NAME_MISMATCH",
+              severity: "MEDIUM",
+              person: p,
+              message: `${p.surname || ""}${p.givenName || ""} (第${p.generationNumber}世) 名字中未包含该代字辈字 "${expectedChar}"。`,
+              fixSuggestion: `请核对名字是否录入正确，或确认是否未使用字辈命名。`,
+            });
+          }
+        }
+      }
+    });
+
+    // 2. Sibling inconsistency
+    const parentToChildren: Record<string, string[]> = {};
+    relations.forEach((r) => {
+      if (r.relationType === "BIOLOGICAL_FATHER_OF" || r.relationType === "BIOLOGICAL_MOTHER_OF") {
+        const parentId = r.fromPersonId;
+        const childId = r.toPersonId;
+        if (!parentToChildren[parentId]) {
+          parentToChildren[parentId] = [];
+        }
+        if (!parentToChildren[parentId].includes(childId)) {
+          parentToChildren[parentId].push(childId);
+        }
+      }
+    });
+
+    Object.entries(parentToChildren).forEach(([parentId, childIds]) => {
+      if (childIds.length > 1) {
+        const siblingPersons = childIds
+          .map((cid) => persons.find((pe) => pe.id === cid))
+          .filter(Boolean);
+
+        const parentName = persons.find((pe) => pe.id === parentId);
+        const parentNameText = parentName ? `${parentName.surname || ""}${parentName.givenName || ""}` : "未知先祖";
+
+        const genNumbers = siblingPersons.map((sp) => sp.generationNumber).filter((gn) => gn !== undefined && gn !== null);
+        const genChars = siblingPersons.map((sp) => sp.generationCharacter).filter(Boolean);
+
+        const uniqueGenNums = Array.from(new Set(genNumbers));
+        if (uniqueGenNums.length > 1) {
+          anomalies.push({
+            type: "SIBLING_GEN_INCONSISTENCY",
+            severity: "HIGH",
+            message: `先祖【${parentNameText}】的后代（同胞兄弟姐妹）录入世代数不一致：${siblingPersons.map((sp) => `${sp.surname || ""}${sp.givenName || ""}(第${sp.generationNumber || "未知"}世)`).join("、")}。`,
+            fixSuggestion: `同胞兄弟姐妹应当属于同一世代，请核实并统一世代数。`,
+          });
+        }
+
+        const uniqueGenChars = Array.from(new Set(genChars));
+        if (uniqueGenChars.length > 1) {
+          anomalies.push({
+            type: "SIBLING_CHAR_INCONSISTENCY",
+            severity: "MEDIUM",
+            message: `先祖【${parentNameText}】的后代中，录入的字辈字不一致：${siblingPersons.map((sp) => `${sp.surname || ""}${sp.givenName || ""}(${sp.generationCharacter || "无"})`).join("、")}。`,
+            fixSuggestion: `请核对是否有人名辈字录入错误或未使用统一字辈。`,
+          });
+        }
+      }
+    });
+
+    // 3. Generation gaps
+    relations.forEach((r) => {
+      if (r.relationType === "BIOLOGICAL_FATHER_OF" || r.relationType === "BIOLOGICAL_MOTHER_OF") {
+        const parent = persons.find((pe) => pe.id === r.fromPersonId);
+        const child = persons.find((pe) => pe.id === r.toPersonId);
+
+        if (parent && child && parent.generationNumber && child.generationNumber) {
+          const diff = child.generationNumber - parent.generationNumber;
+          if (diff !== 1) {
+            anomalies.push({
+              type: "GENERATION_GAP",
+              severity: "HIGH",
+              message: `父/母子世系代数错位：先祖【${parent.surname || ""}${parent.givenName || ""}】(第${parent.generationNumber}世) 与其子女【${child.surname || ""}${child.givenName || ""}】(第${child.generationNumber}世) 代数相差为 ${diff} 代（标准应相差 1 代）。`,
+              fixSuggestion: `请核实两人的世代代数录入是否准确。`,
+            });
+          }
+        }
+      }
+    });
+
+    setValidationResults(anomalies);
+    setIsValidating(false);
+  };
 }

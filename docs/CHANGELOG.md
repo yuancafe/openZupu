@@ -5,6 +5,16 @@ All notable changes to OpenZupu will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.9.0] - 2026-07-10
+### Added
+- **Interactive Leaflet Migration Map**: Integrated an interactive, sepia-styled historical mapping component powered by Leaflet.js. Plots birth, residence, and burial places with coordinate overlays and connects them using sequential flowlines.
+- **Geospatial Filters**: Users can dynamically filter migration paths by branch or by specific family member. Hover tooltips and popups display detailed migration event data.
+
+## [1.8.0] - 2026-07-10
+### Added
+- **Chinese Generation Poem (Zi-Bei) Parser**: Added a dedicated console to parse and register standard generational poems (昭穆/字辈诗). Converts text strings into generation sequence lists.
+- **Smart Pedigree Validation Engine**: Performs comprehensive scans on clan members to audit character mismatches, sibling generation inconsistencies, and parent-child generation number jumps.
+
 ## [1.7.0] - 2026-07-09
 ### Added
 - **Historical Sources Registry**: Added a dedicated Sources Console in the Project Details tab, allowing owners/editors to register family genealogies (宗谱/族谱), gravestones (碑铭), official histories, manuscripts, and other reference materials.

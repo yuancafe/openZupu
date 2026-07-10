@@ -35,11 +35,19 @@ export class PersonService {
           projectId,
           ...projectFilter,
         },
+        include: {
+          nativePlace: true,
+          residencePlace: true,
+        },
       });
     }
 
     return this.prisma.person.findMany({
       where: projectFilter,
+      include: {
+        nativePlace: true,
+        residencePlace: true,
+      },
     });
   }
 

@@ -9,6 +9,16 @@
 ## Key Features
 
 - 🏠 **Ready-to-use Lightweight Architecture**: Built on NestJS + Next.js + Prisma + PostgreSQL, making it suitable for local development, private deployments, and the Render demo stack.
+- 🗺️ **Interactive Leaflet Migration Map (V1.9)**:
+  - **Geospatial Coordinates**: Powered by Leaflet.js, it plots birth, residence, and burial coordinates of clan members directly on an interactive map.
+  - **Vector Movement Flowlines**: Draws generation migration lines showing family expansion and individual moves (blue lines for males, pink dashed lines for females) with support for filtering by branch or specific member.
+  - **Vintage Sepia Aesthetic Overlay**: Uses a custom map CSS filter that styling standard map tiles into sepia-toned parchment paper, matching the historical archival feel.
+- 📖 **Generation Poem (Zi-Bei) Smart Analyzer (V1.8)**:
+  - **Online Poem Parser**: Input space-separated or comma-separated generation poems (e.g. `守 浩 绍 中 德 承 先 启 后 贤`) to automatically split, map, and save generation numbers and characters.
+  - **Evidentiary Validation Scanner**: Scans all project members to find anomalies:
+    - *Character Mismatches*: Flags members whose name or generation character doesn't match the poem expected character for their generation.
+    - *Sibling Inconsistencies*: Audits siblings to ensure they are assigned to the exact same generation number and generation character.
+    - *Generation Gaps*: Detects child-parent generation jumps where generation differences are not equal to 1.
 - 📜 **Footnotes & Academic Citations (V1.7)**:
   - **Historical Sources Registry**: Added a dedicated Sources Console in the Project Details tab, allowing owners/editors to register family genealogies (宗谱/族谱), gravestones (碑铭), official histories, manuscripts, and other reference materials.
   - **Footnotes & Academic Citations**: Implemented a claims-evidence citation system in the Person Details page. Users can link person attributes (courtesy name, birth date, etc.) to registered sources, providing verbatim quotes, modern interpretations, and confidence/reliability ratings.
